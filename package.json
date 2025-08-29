@@ -3,19 +3,11 @@
   "version": "1.0.0",
   "description": "Trustless crowdfunding for live events powered by Uniswap v4 hooks",
   "private": true,
-  "workspaces": [
-    "packages/*"
-  ],
   "scripts": {
-    "dev": "pnpm --filter frontend dev",
-    "build": "pnpm --filter frontend build",
-    "start": "pnpm --filter frontend start",
-    "lint": "pnpm --filter frontend lint",
-    "install:all": "pnpm install",
-    "clean": "pnpm --filter frontend clean && rm -rf node_modules",
-    "contracts:build": "pnpm --filter contracts build",
-    "contracts:test": "pnpm --filter contracts test",
-    "contracts:deploy": "pnpm --filter contracts deploy"
+    "dev": "cd packages/frontend && npm run dev",
+    "build": "cd packages/frontend && npm run build",
+    "start": "cd packages/frontend && npm run start",
+    "lint": "cd packages/frontend && npm run lint"
   },
   "keywords": [
     "blockchain",
@@ -26,12 +18,5 @@
     "tokenization"
   ],
   "author": "Fanio Team",
-  "license": "MIT",
-  "devDependencies": {
-    "pnpm": "^9.0.0"
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "pnpm": ">=8.0.0"
-  }
+  "license": "MIT"
 }

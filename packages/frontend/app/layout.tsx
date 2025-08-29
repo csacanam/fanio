@@ -5,9 +5,31 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.app',
+  title: 'Fanio - From Fans to Stakeholders',
+  description: 'Trustless crowdfunding for live events powered by Uniswap v4 hooks. Fund concerts, earn tokens, enjoy exclusive perks.',
+  keywords: ['blockchain', 'crowdfunding', 'concerts', 'events', 'defi', 'uniswap', 'tokens'],
+  authors: [{ name: 'Fanio Team' }],
+  creator: 'Fanio',
+  publisher: 'Fanio',
+  openGraph: {
+    title: 'Fanio - From Fans to Stakeholders',
+    description: 'Help make concerts happen and earn tradeable tokens with exclusive perks.',
+    url: 'https://fanio.io',
+    siteName: 'Fanio',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Fanio - From Fans to Stakeholders',
+    description: 'Help make concerts happen and earn tradeable tokens with exclusive perks.',
+    creator: '@fanio_io',
+  },
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon-16x16.png',
+    apple: '/apple-touch-icon.png',
+  },
+  manifest: '/site.webmanifest',
 }
 
 export default function RootLayout({

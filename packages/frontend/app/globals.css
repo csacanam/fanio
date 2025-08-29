@@ -1,79 +1,119 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-
-@custom-variant dark (&:is(.dark *));
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  /* Updated color tokens to match Fanio design brief with amber/orange theme */
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.25 0 0);
-  --card: oklch(0.99 0.01 85);
-  --card-foreground: oklch(0.25 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.25 0 0);
-  --primary: oklch(0.65 0.15 45);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.75 0.12 50);
-  --secondary-foreground: oklch(1 0 0);
-  --muted: oklch(0.99 0.01 85);
-  --muted-foreground: oklch(0.45 0 0);
-  --accent: oklch(0.75 0.12 50);
-  --accent-foreground: oklch(1 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.92 0.01 85);
-  --input: oklch(0.99 0.01 85);
-  --ring: oklch(0.65 0.15 45 / 0.5);
-  --chart-1: oklch(0.65 0.15 45);
-  --chart-2: oklch(0.75 0.12 50);
-  --chart-3: oklch(0.25 0 0);
-  --chart-4: oklch(0.99 0.01 85);
-  --chart-5: oklch(0.577 0.245 27.325);
-  --radius: 0.5rem;
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.25 0 0);
-  --sidebar-primary: oklch(0.65 0.15 45);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.75 0.12 50);
-  --sidebar-accent-foreground: oklch(1 0 0);
-  --sidebar-border: oklch(0.92 0.01 85);
-  --sidebar-ring: oklch(0.65 0.15 45 / 0.5);
+  /* Fanio Design System - Music & Events Inspired */
+  --background: 0.99 0.005 85;
+  --foreground: 0.15 0.02 85;
+  --card: 1 0 0;
+  --card-foreground: 0.15 0.02 85;
+  --popover: 1 0 0;
+  --popover-foreground: 0.15 0.02 85;
+  
+  /* Primary - Electric Orange/Amber for energy */
+  --primary: 0.68 0.18 50;
+  --primary-foreground: 0.98 0.01 50;
+  
+  /* Secondary - Deep Purple for music vibes */
+  --secondary: 0.45 0.15 285;
+  --secondary-foreground: 0.98 0.01 285;
+  
+  /* Muted - Warm neutral with amber tint */
+  --muted: 0.96 0.02 85;
+  --muted-foreground: 0.45 0.03 85;
+  
+  /* Accent - Vibrant Cyan for highlights */
+  --accent: 0.75 0.15 200;
+  --accent-foreground: 0.98 0.01 200;
+  
+  /* Success - Electric Green */
+  --success: 0.65 0.18 140;
+  --success-foreground: 0.98 0.01 140;
+  
+  /* Warning - Bright Orange */
+  --warning: 0.75 0.16 65;
+  --warning-foreground: 0.98 0.01 65;
+  
+  /* Destructive - Hot Pink */
+  --destructive: 0.62 0.22 15;
+  --destructive-foreground: 0.98 0.01 15;
+  
+  /* UI Elements */
+  --border: 0.90 0.02 85;
+  --input: 0.96 0.02 85;
+  --ring: 0.68 0.18 50;
+  
+  /* Charts - Music festival palette */
+  --chart-1: 0.68 0.18 50;  /* Electric Orange */
+  --chart-2: 0.45 0.15 285; /* Deep Purple */
+  --chart-3: 0.75 0.15 200; /* Vibrant Cyan */
+  --chart-4: 0.65 0.18 140; /* Electric Green */
+  --chart-5: 0.62 0.22 15;  /* Hot Pink */
+  
+  --radius: 0.75rem;
+  
+  /* Sidebar */
+  --sidebar: 1 0 0;
+  --sidebar-foreground: 0.15 0.02 85;
+  --sidebar-primary: 0.68 0.18 50;
+  --sidebar-primary-foreground: 0.98 0.01 50;
+  --sidebar-accent: 0.96 0.02 85;
+  --sidebar-accent-foreground: 0.45 0.03 85;
+  --sidebar-border: 0.90 0.02 85;
+  --sidebar-ring: 0.68 0.18 50;
 }
 
 .dark {
-  /* Updated dark mode colors to maintain amber theme */
-  --background: oklch(0.08 0 0);
-  --foreground: oklch(0.98 0 0);
-  --card: oklch(0.12 0 0);
-  --card-foreground: oklch(0.98 0 0);
-  --popover: oklch(0.08 0 0);
-  --popover-foreground: oklch(0.98 0 0);
-  --primary: oklch(0.75 0.12 50);
-  --primary-foreground: oklch(0.08 0 0);
-  --secondary: oklch(0.18 0 0);
-  --secondary-foreground: oklch(0.98 0 0);
-  --muted: oklch(0.18 0 0);
-  --muted-foreground: oklch(0.65 0 0);
-  --accent: oklch(0.75 0.12 50);
-  --accent-foreground: oklch(0.08 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.18 0 0);
-  --input: oklch(0.18 0 0);
-  --ring: oklch(0.75 0.12 50 / 0.5);
-  --chart-1: oklch(0.75 0.12 50);
-  --chart-2: oklch(0.65 0.15 45);
-  --chart-3: oklch(0.98 0 0);
-  --chart-4: oklch(0.18 0 0);
-  --chart-5: oklch(0.577 0.245 27.325);
-  --sidebar: oklch(0.12 0 0);
-  --sidebar-foreground: oklch(0.98 0 0);
-  --sidebar-primary: oklch(0.75 0.12 50);
-  --sidebar-primary-foreground: oklch(0.08 0 0);
-  --sidebar-accent: oklch(0.18 0 0);
-  --sidebar-accent-foreground: oklch(0.98 0 0);
-  --sidebar-border: oklch(0.18 0 0);
-  --sidebar-ring: oklch(0.75 0.12 50 / 0.5);
+  /* Fanio Dark Mode - Concert Stage Vibes */
+  --background: 0.08 0.01 285;
+  --foreground: 0.95 0.02 85;
+  --card: 0.12 0.02 285;
+  --card-foreground: 0.95 0.02 85;
+  --popover: 0.12 0.02 285;
+  --popover-foreground: 0.95 0.02 85;
+  
+  /* Primary - Brighter orange for dark mode */
+  --primary: 0.72 0.20 50;
+  --primary-foreground: 0.08 0.01 50;
+  
+  /* Secondary - Vibrant purple */
+  --secondary: 0.55 0.18 285;
+  --secondary-foreground: 0.95 0.02 285;
+  
+  /* Muted - Dark with purple tint */
+  --muted: 0.15 0.02 285;
+  --muted-foreground: 0.65 0.03 85;
+  
+  /* Accent - Bright cyan */
+  --accent: 0.70 0.18 200;
+  --accent-foreground: 0.08 0.01 200;
+  
+  /* Destructive - Hot pink */
+  --destructive: 0.65 0.24 15;
+  --destructive-foreground: 0.95 0.02 15;
+  
+  /* UI Elements */
+  --border: 0.20 0.03 285;
+  --input: 0.15 0.02 285;
+  --ring: 0.72 0.20 50;
+  
+  /* Charts - Neon festival palette */
+  --chart-1: 0.72 0.20 50;  /* Bright Orange */
+  --chart-2: 0.55 0.18 285; /* Vibrant Purple */
+  --chart-3: 0.70 0.18 200; /* Bright Cyan */
+  --chart-4: 0.70 0.20 140; /* Bright Green */
+  --chart-5: 0.65 0.24 15;  /* Hot Pink */
+  
+  /* Sidebar */
+  --sidebar: 0.08 0.01 285;
+  --sidebar-foreground: 0.95 0.02 85;
+  --sidebar-primary: 0.72 0.20 50;
+  --sidebar-primary-foreground: 0.08 0.01 50;
+  --sidebar-accent: 0.15 0.02 285;
+  --sidebar-accent-foreground: 0.65 0.03 85;
+  --sidebar-border: 0.20 0.03 285;
+  --sidebar-ring: 0.72 0.20 50;
 }
 
 @theme inline {
@@ -119,9 +159,93 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+  @apply border-border;
+}
+*:focus-visible {
+  @apply outline-2 outline-offset-2 outline-ring;
+}
+body {
+  @apply bg-background text-foreground;
+}
+
+/* Fanio Custom Styles */
+.fanio-gradient {
+  background: linear-gradient(135deg, 
+    oklch(var(--primary)) 0%, 
+    oklch(var(--secondary)) 50%, 
+    oklch(var(--accent)) 100%);
+}
+
+.fanio-gradient-text {
+  background: linear-gradient(135deg, 
+    oklch(var(--primary)) 0%, 
+    oklch(var(--secondary)) 50%, 
+    oklch(var(--accent)) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.fanio-card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fanio-card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 10px 10px -5px rgb(0 0 0 / 0.04);
+}
+
+.fanio-button-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.fanio-button-glow::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent, 
+    oklch(var(--primary) / 0.3), 
+    transparent);
+  transition: left 0.5s;
+}
+
+.fanio-button-glow:hover::before {
+  left: 100%;
+}
+
+/* Progress bar enhancement */
+.progress-bar-glow {
+  box-shadow: 0 0 20px oklch(var(--primary) / 0.5);
+}
+
+/* Event card enhancement */
+.event-card {
+  background: linear-gradient(135deg, 
+    oklch(var(--card)) 0%, 
+    oklch(var(--card) / 0.95) 100%);
+  backdrop-filter: blur(10px);
+  border: 1px solid oklch(var(--border) / 0.8);
+}
+
+/* Music-inspired animations */
+@keyframes pulse-music {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.music-pulse {
+  animation: pulse-music 2s ease-in-out infinite;
+}
+
+/* Concert stage lighting effect */
+.stage-lighting {
+  background: radial-gradient(ellipse at center, 
+    oklch(var(--primary) / 0.1) 0%, 
+    transparent 70%);
+}
 }

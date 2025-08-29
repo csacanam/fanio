@@ -212,7 +212,7 @@ export default function FanioLanding() {
                       <span className="text-2xl font-bold">${currentProgress.toLocaleString()} USDC</span>
                       <span className="text-sm text-muted-foreground">of ${targetAmount.toLocaleString()}</span>
                     </div>
-                    <Progress value={progressPercentage} className="h-3" />
+                    <Progress value={progressPercentage} className="h-3 progress-bar-glow" />
                     <p className="text-sm text-muted-foreground mt-2">{progressPercentage.toFixed(1)}% funded</p>
                   </div>
 
@@ -232,7 +232,7 @@ export default function FanioLanding() {
                       <Button
                         onClick={simulateInvestment}
                         disabled={!investmentAmount || isSimulating}
-                        className="w-full"
+                        className="w-full fanio-button-glow"
                         size="lg"
                       >
                         {isSimulating ? "Processing..." : "Fund This Event"}
@@ -324,10 +324,10 @@ export default function FanioLanding() {
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <Zap className="h-5 w-5 text-primary-foreground" />
+            <div className="w-8 h-8 fanio-gradient rounded-lg flex items-center justify-center music-pulse">
+              <Zap className="h-5 w-5 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-primary">Fanio</h1>
+            <h1 className="text-2xl font-bold fanio-gradient-text">Fanio</h1>
           </div>
           <Button variant="outline" className="cursor-pointer bg-transparent">
             Connect Wallet
@@ -339,13 +339,13 @@ export default function FanioLanding() {
       <section className="py-20 px-4">
         <div className="container mx-auto text-center max-w-4xl">
           <h1 className="text-5xl md:text-6xl font-bold text-balance mb-6">
-            From Fans to <span className="text-primary">Stakeholders</span>
+            From Fans to <span className="fanio-gradient-text">Stakeholders</span>
           </h1>
           <p className="text-xl text-muted-foreground text-balance mb-8 max-w-2xl mx-auto leading-relaxed">
             Help make concerts happen and earn tradeable tokens with exclusive perks.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="text-lg px-8 cursor-pointer" onClick={scrollToEvents}>
+            <Button size="lg" className="text-lg px-8 cursor-pointer fanio-button-glow" onClick={scrollToEvents}>
               Explore Events
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
@@ -409,14 +409,14 @@ export default function FanioLanding() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setSelectedEvent("demo")}>
+            <Card className="cursor-pointer fanio-card-hover event-card" onClick={() => setSelectedEvent("demo")}>
               <div className="relative">
                 <img
                   src={demoEvent.image || "/placeholder.svg"}
                   alt={demoEvent.title}
                   className="w-full h-48 object-cover rounded-t-lg"
                 />
-                <Badge className="absolute top-3 right-3">{demoEvent.daysLeft} days left</Badge>
+                <Badge className="absolute top-3 right-3 fanio-gradient text-white border-0">{demoEvent.daysLeft} days left</Badge>
               </div>
               <CardContent className="p-4">
                 <h3 className="font-bold text-lg mb-1 text-balance">{demoEvent.title}</h3>
@@ -429,7 +429,7 @@ export default function FanioLanding() {
                     <span>${demoEvent.current.toLocaleString()} raised</span>
                     <span>{((demoEvent.current / demoEvent.target) * 100).toFixed(0)}%</span>
                   </div>
-                  <Progress value={(demoEvent.current / demoEvent.target) * 100} className="h-2" />
+                  <Progress value={(demoEvent.current / demoEvent.target) * 100} className="h-2 progress-bar-glow" />
                   <p className="text-xs text-muted-foreground">Goal: ${demoEvent.target.toLocaleString()} USDC</p>
                 </div>
 
@@ -495,32 +495,32 @@ export default function FanioLanding() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="text-center">
-              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                <DollarSign className="h-8 w-8 text-primary-foreground" />
+              <div className="w-16 h-16 fanio-gradient rounded-full flex items-center justify-center mx-auto mb-4 music-pulse">
+                <DollarSign className="h-8 w-8 text-white" />
               </div>
               <h3 className="font-semibold text-lg mb-2">1. Fund Events</h3>
               <p className="text-muted-foreground text-sm">Buy event tokens with USDC to fund your favorite shows</p>
             </div>
 
             <div className="text-center">
-              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                <TrendingUp className="h-8 w-8 text-primary-foreground" />
+              <div className="w-16 h-16 fanio-gradient rounded-full flex items-center justify-center mx-auto mb-4 music-pulse">
+                <TrendingUp className="h-8 w-8 text-white" />
               </div>
               <h3 className="font-semibold text-lg mb-2">2. Goal Reached</h3>
               <p className="text-muted-foreground text-sm">Organizer receives full funding when target is met</p>
             </div>
 
             <div className="text-center">
-              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                <Users className="h-8 w-8 text-primary-foreground" />
+              <div className="w-16 h-16 fanio-gradient rounded-full flex items-center justify-center mx-auto mb-4 music-pulse">
+                <Users className="h-8 w-8 text-white" />
               </div>
               <h3 className="font-semibold text-lg mb-2">3. Market Opens</h3>
               <p className="text-muted-foreground text-sm">Free market opens for token trading</p>
             </div>
 
             <div className="text-center">
-              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                <Gift className="h-8 w-8 text-primary-foreground" />
+              <div className="w-16 h-16 fanio-gradient rounded-full flex items-center justify-center mx-auto mb-4 music-pulse">
+                <Gift className="h-8 w-8 text-white" />
               </div>
               <h3 className="font-semibold text-lg mb-2">4. Enjoy Perks</h3>
               <p className="text-muted-foreground text-sm">Use tokens for exclusive access, discounts, and more</p>
@@ -536,7 +536,7 @@ export default function FanioLanding() {
           <p className="text-xl text-muted-foreground mb-8 text-balance">
             Be part of the future where fans become stakeholders and events get the funding they deserve.
           </p>
-          <Button size="lg" className="text-lg px-8 cursor-pointer" onClick={scrollToEvents}>
+          <Button size="lg" className="text-lg px-8 cursor-pointer fanio-button-glow" onClick={scrollToEvents}>
             Start Funding Events
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
@@ -549,10 +549,10 @@ export default function FanioLanding() {
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                  <Zap className="h-5 w-5 text-primary-foreground" />
+                <div className="w-8 h-8 fanio-gradient rounded-lg flex items-center justify-center">
+                  <Zap className="h-5 w-5 text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-primary">Fanio</h3>
+                <h3 className="text-xl font-bold fanio-gradient-text">Fanio</h3>
               </div>
               <p className="text-muted-foreground text-sm">
                 Trustless crowdfunding for live events powered by blockchain technology.
