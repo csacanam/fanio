@@ -44,6 +44,7 @@ contract FundingManager is ReentrancyGuard {
     );
 
     event CampaignFunded(uint256 indexed campaignId, uint256 totalRaised);
+    event CampaignExpired(uint256 indexed campaignId, uint256 totalRaised);
     event FundsWithdrawn(
         uint256 indexed campaignId,
         address indexed organizer,
@@ -66,10 +67,10 @@ contract FundingManager is ReentrancyGuard {
         require(targetAmount > 0, "Target amount must be positive");
         require(durationDays > 0, "Duration must be positive");
 
-        // Calcular deposit requerido (10% de la meta)
-        uint256 requiredDeposit = (targetAmount * 1000) / 10000; // 10%
+        // Calculate required deposit (10% of target)
+        uint256 requiredDeposit = targetAmount / 10; // 10%
 
-        // Transferir USDC del organizador al contrato
+        // Transfer USDC from organizer to contract
         require(
             FUNDING_TOKEN.transferFrom(
                 msg.sender,
@@ -116,8 +117,11 @@ contract FundingManager is ReentrancyGuard {
         uint256 amount
     ) external nonReentrant {
         EventCampaign storage campaign = campaigns[campaignId];
+        
+        // Check and update campaign status before processing
+        _checkCampaignStatus(campaignId);
+        
         require(campaign.isActive, "Campaign not active");
-        require(block.timestamp < campaign.deadline, "Campaign ended");
         require(amount > 0, "Amount must be positive");
         require(!campaign.isFunded, "Campaign already funded");
 
@@ -127,7 +131,7 @@ contract FundingManager is ReentrancyGuard {
             "Transfer failed"
         );
 
-        // Registrar contribución
+        // Register contribution
         campaign.raisedAmount += amount;
         userContributions[msg.sender][campaignId] += amount;
 
@@ -150,7 +154,7 @@ contract FundingManager is ReentrancyGuard {
 
         emit CampaignFunded(campaignId, campaign.raisedAmount);
 
-        // TODO: Crear Uniswap V4 pool con liquidez automática
+        // TODO: Create Uniswap V4 pool with automatic liquidity
     }
 
     /**
@@ -161,7 +165,7 @@ contract FundingManager is ReentrancyGuard {
         require(campaign.organizer == msg.sender, "Not the organizer");
         require(campaign.isFunded, "Campaign not funded");
 
-        // Organizador recibe la meta completa
+        // Organizer receives the full target amount
         uint256 organizerAmount = campaign.targetAmount;
 
         require(
@@ -170,5 +174,64 @@ contract FundingManager is ReentrancyGuard {
         );
 
         emit FundsWithdrawn(campaignId, msg.sender, organizerAmount);
+    }
+
+    /**
+     * @dev Close an expired campaign that didn't reach its funding goal
+     * @param campaignId The ID of the campaign to close
+     */
+    function closeExpiredCampaign(uint256 campaignId) external {
+        EventCampaign storage campaign = campaigns[campaignId];
+        require(campaign.isActive, "Campaign not active");
+        require(block.timestamp >= campaign.deadline, "Campaign not expired yet");
+        require(!campaign.isFunded, "Campaign already funded");
+
+        campaign.isActive = false;
+
+        emit CampaignExpired(campaignId, campaign.raisedAmount);
+
+        // TODO: Implement refund logic for contributors
+    }
+
+    /**
+     * @dev Check and update campaign status based on current time
+     * @param campaignId The ID of the campaign to check
+     */
+    function _checkCampaignStatus(uint256 campaignId) internal {
+        EventCampaign storage campaign = campaigns[campaignId];
+        if (block.timestamp >= campaign.deadline && campaign.isActive && !campaign.isFunded) {
+            campaign.isActive = false;
+            emit CampaignExpired(campaignId, campaign.raisedAmount);
+        }
+    }
+
+    /**
+     * @dev Get comprehensive campaign status information
+     * @param campaignId The ID of the campaign to query
+     * @return isActive Whether the campaign is currently active
+     * @return isExpired Whether the campaign has expired
+     * @return isFunded Whether the campaign has been successfully funded
+     * @return timeLeft Time remaining until deadline (0 if expired)
+     * @return raisedAmount Total amount raised so far
+     * @return targetAmount Funding goal amount
+     */
+    function getCampaignStatus(uint256 campaignId) external view returns (
+        bool isActive,
+        bool isExpired,
+        bool isFunded,
+        uint256 timeLeft,
+        uint256 raisedAmount,
+        uint256 targetAmount
+    ) {
+        EventCampaign storage campaign = campaigns[campaignId];
+        
+        isActive = campaign.isActive;
+        isExpired = block.timestamp >= campaign.deadline;
+        isFunded = campaign.isFunded;
+        timeLeft = block.timestamp >= campaign.deadline ? 0 : campaign.deadline - block.timestamp;
+        raisedAmount = campaign.raisedAmount;
+        targetAmount = campaign.targetAmount;
+        
+        return (isActive, isExpired, isFunded, timeLeft, raisedAmount, targetAmount);
     }
 }
