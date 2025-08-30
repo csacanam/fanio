@@ -269,8 +269,8 @@ export default function EventPage({ params }: EventPageProps) {
                         </Button>
                       </div>
                       <div className="text-center text-sm text-muted-foreground">
-                        <p>Current Price: $1.20 USDC</p>
-                        <p className="text-primary">+20% from funding price</p>
+                        <p>Funding Price: $1.00 USDC</p>
+                        <p className="text-primary">1:1 ratio during funding phase</p>
                       </div>
                     </div>
                                            )}
@@ -565,10 +565,10 @@ export default function EventPage({ params }: EventPageProps) {
                            Sell $TSBOG
                          </Button>
                        </div>
-                    <div className="text-center text-sm text-muted-foreground">
-                      <p>Current Price: $1.20 USDC</p>
-                      <p className="text-primary">+20% from funding price</p>
-                    </div>
+                                          <div className="text-center text-sm text-muted-foreground">
+                        <p>Funding Price: $1.00 USDC</p>
+                        <p className="text-primary">1:1 ratio during funding phase</p>
+                      </div>
                   </div>
                 )}
 

@@ -630,9 +630,9 @@ contract FundingManager is ReentrancyGuard {
  *    - Contributors hold EventTokens (1:1 with contribution)
  *
  * TOKEN DISTRIBUTION:
- * - Contributors: 100% of target (1:1 ratio with contribution)
+ * - Contributors: 130% of target (1:1 ratio with contribution, up to 30% over target)
  * - Pool: 25% of target (for initial Uniswap V4 liquidity)
- * - Total Supply: 125% of target (100% + 25%)
+ * - Total Supply: 155% of target (130% + 25%)
  *
  * FINANCIAL TRACKING:
  * - organizerDeposit: 10% of target (protocol fee if successful)

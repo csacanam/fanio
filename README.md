@@ -105,6 +105,8 @@ Fanio turns every event into a liquid digital asset.
 - Pool strengthens with each trade
 - Fans have liquidity, but selling is costlier → encourages holding
 
+**Note**: This section describes the planned Uniswap v4 integration. Currently, the system focuses on the crowdfunding phase.
+
 ---
 
 ## 📊 Numerical Example
@@ -122,14 +124,16 @@ Fanio turns every event into a liquid digital asset.
 ### Fan Buys 100 USDC in Pool:
 
 - 3% fee → **3 USDC**
-- 3.88 USDC (40%) → locked as permanent liquidity
-- 5.82 USDC (60%) → Fanio
+- 1.2 USDC (40% of 3 USDC) → locked as permanent liquidity
+- 1.8 USDC (60% of 3 USDC) → Fanio
 
 ### Fan Sells 100 USDC Worth of $EVENT:
 
 - 10% fee → **10 USDC**
-- 4 USDC (40%) → permanent liquidity
-- 6 USDC (60%) → Fanio
+- 4 USDC (40% of 10 USDC) → permanent liquidity
+- 6 USDC (60% of 10 USDC) → Fanio
+
+**Note**: These examples show the planned Uniswap v4 integration. The current MVP focuses on crowdfunding and campaign management.
 
 ---
 
