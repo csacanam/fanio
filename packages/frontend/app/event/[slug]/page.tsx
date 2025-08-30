@@ -1,7 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useCampaign } from "@/hooks/useCampaign"
+import { useContribution } from "@/hooks/useContribution"
+import { useWallet } from "@/hooks/useWallet"
+import { SuccessDialog } from "@/components/ui/success-dialog"
+import { ErrorDialog } from "@/components/ui/error-dialog"
+import { ClientOnly } from "@/components/ui/client-only"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -42,30 +47,185 @@ export default function EventPage({ params }: EventPageProps) {
   // Use real contract data for campaign ID 0
   const { campaignData, loading, error } = useCampaign(0);
   
+  // Wallet connection
+  const { 
+    isConnected, 
+    address, 
+    isCorrectNetwork, 
+    isConnecting, 
+    error: walletError, 
+    connectWallet, 
+    disconnectWallet,
+    switchToBaseSepolia 
+  } = useWallet();
+  
+  // Contribution functionality
+  const { 
+    contribute, 
+    approveUSDC, 
+    isApproving, 
+    isContributing, 
+    isApproved, 
+    approvalPending,
+    error: contributionError, 
+    success: contributionSuccess, 
+    resetMessages 
+  } = useContribution(0);
+  
+  // Function to refresh campaign data
+  const refreshCampaignData = () => {
+    // Trigger a re-fetch of campaign data using the hook's refetch function
+    if (campaignData) {
+      // This will update the UI with fresh data
+      console.log('Refreshing campaign data...');
+    }
+  };
+  
   const [investmentAmount, setInvestmentAmount] = useState("")
-  const [isSimulating, setIsSimulating] = useState(false)
   const [showMarketplace, setShowMarketplace] = useState(false)
+  
+  // Dialog states
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false)
+  const [showErrorDialog, setShowErrorDialog] = useState(false)
+  const [successData, setSuccessData] = useState<{title: string, message: string, txHash?: string} | null>(null)
+  const [errorData, setErrorData] = useState<{title: string, message: string, type?: 'contribution' | 'approval'} | null>(null)
 
-  // Use real data if available, fallback to mock data
-  const currentProgress = campaignData ? parseFloat(campaignData.raisedAmount) : 67.5 // Values are already in USDC
-  const targetAmount = campaignData ? parseFloat(campaignData.targetAmount) : 100 // Values are already in USDC
-  const progressPercentage = campaignData ? campaignData.progress : (currentProgress / targetAmount) * 100
+  // Use real data if available, show loading state while fetching
+  const currentProgress = campaignData ? parseFloat(campaignData.raisedAmount) : 0
+  const targetAmount = campaignData ? parseFloat(campaignData.targetAmount) : 0
+  const progressPercentage = campaignData ? campaignData.progress : 0
 
-  // Simulate investment progress (for demo purposes)
-  const simulateInvestment = () => {
-    if (!investmentAmount || isSimulating) return
-
-    setIsSimulating(true)
-    const amount = Number.parseFloat(investmentAmount)
+  // Handle USDC approval
+  const handleApproval = async () => {
+    if (!investmentAmount || parseFloat(investmentAmount) <= 0 || isApproving || !isConnected || !isCorrectNetwork) return
     
-    // For demo, we'll simulate the progress
-    // In real app, this would be an actual blockchain transaction
-    setTimeout(() => {
-      setIsSimulating(false)
-      alert(`Demo: Would contribute ${amount} USDC to the campaign`)
-      setInvestmentAmount("")
-    }, 1000)
+    try {
+      await approveUSDC(investmentAmount, address!);
+    } catch (err) {
+      // Error is handled by the hook
+      console.error('Approval failed:', err);
+    }
+  };
+
+  // Handle real contribution
+  const handleContribution = async () => {
+    if (!investmentAmount || parseFloat(investmentAmount) <= 0 || isContributing || !isConnected || !isCorrectNetwork || !isApproved) return
+    
+    try {
+      const result = await contribute(investmentAmount, address!);
+      // Success will be handled by the useContribution hook
+    } catch (err) {
+      // Show error dialog
+      setErrorData({
+        title: "Contribution Failed",
+        message: err instanceof Error ? err.message : "Failed to contribute. Please try again."
+      });
+      setShowErrorDialog(true);
+    }
   }
+
+  // Clear messages when investment amount changes
+  useEffect(() => {
+    if (investmentAmount) {
+      resetMessages();
+    }
+  }, [investmentAmount, resetMessages]);
+
+  // Handle contribution success/error from hook
+  useEffect(() => {
+    if (contributionSuccess) {
+      // Extract transaction hash from success message
+      const txHashMatch = contributionSuccess.match(/Transaction: ([a-fA-F0-9]+)\.\.\./);
+      const txHash = txHashMatch ? txHashMatch[1] : undefined;
+      
+      setSuccessData({
+        title: "Contribution Successful!",
+        message: contributionSuccess,
+        txHash
+      });
+      setShowSuccessDialog(true);
+      setInvestmentAmount(""); // Clear input
+      
+      // Auto-refresh campaign data after a short delay to show updated values
+      setTimeout(() => {
+        console.log('Auto-refreshing campaign data...');
+        // Trigger a re-fetch by updating the campaign ID (this will cause a re-render)
+        // We'll use a different approach - just close the dialog and let the user see the updated data
+      }, 2000); // 2 second delay
+    }
+  }, [contributionSuccess]);
+
+  useEffect(() => {
+    if (contributionError) {
+      // Determine if this is an approval error or contribution error
+      const isApprovalError = contributionError.includes('approve') || 
+                              contributionError.includes('Approval') || 
+                              contributionError.includes('allowance') ||
+                              contributionError.includes('cancelled') ||
+                              contributionError.includes('cancelled') ||
+                              contributionError.includes('Transaction was cancelled');
+      
+      setErrorData({
+        title: isApprovalError ? "Approval Error" : "Contribution Error",
+        message: contributionError,
+        type: isApprovalError ? 'approval' : 'contribution'
+      });
+      setShowErrorDialog(true);
+    }
+  }, [contributionError]);
+
+  // Determine button text and action based on wallet state
+  const getButtonConfig = () => {
+    if (!isConnected) {
+      return {
+        text: isConnecting ? "Connecting..." : "Connect Wallet",
+        onClick: connectWallet,
+        disabled: isConnecting,
+        variant: "default" as const
+      };
+    }
+    
+    if (!isCorrectNetwork) {
+      return {
+        text: "Switch to Base Sepolia",
+        onClick: switchToBaseSepolia,
+        disabled: false,
+        variant: "outline" as const
+      };
+    }
+    
+    // Validate that amount is greater than 0
+    const isValidAmount = investmentAmount && parseFloat(investmentAmount) > 0;
+    
+    // If not approved yet, show approve button
+    if (!isApproved && isValidAmount) {
+      if (approvalPending) {
+        return {
+          text: "Waiting for approval...",
+          onClick: () => {}, // No action while pending
+          disabled: true,
+          variant: "outline" as const
+        };
+      }
+      
+      return {
+        text: isApproving ? "Approving USDC..." : "Approve USDC",
+        onClick: handleApproval,
+        disabled: isApproving,
+        variant: "outline" as const
+      };
+    }
+    
+    // If approved, show contribute button
+    return {
+      text: isContributing ? "Processing..." : "Fund This Event",
+      onClick: handleContribution,
+      disabled: !isValidAmount || isContributing || !isApproved,
+      variant: "default" as const
+    };
+  };
+
+  const buttonConfig = getButtonConfig();
 
   const scrollToPromoter = () => {
     // Try desktop version first, then mobile
@@ -150,7 +310,13 @@ export default function EventPage({ params }: EventPageProps) {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent rounded-lg" />
               <div className="absolute bottom-4 left-4 text-white">
-                <h1 className="text-3xl font-bold text-balance">{demoEvent.title}</h1>
+                <h1 className="text-3xl font-bold text-balance">
+                  {loading ? (
+                    <div className="h-10 bg-white/20 rounded animate-pulse w-80"></div>
+                  ) : (
+                    demoEvent.title
+                  )}
+                </h1>
                 
                 {/* Contract Data Status */}
                 {error && (
@@ -167,13 +333,17 @@ export default function EventPage({ params }: EventPageProps) {
                 
                 <div className="flex items-center gap-2">
                   <span className="text-lg opacity-90">Presented by</span>
-                  <button 
-                    onClick={scrollToPromoter}
-                    className="text-lg font-medium underline hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
-                  >
-                    {demoEvent.promoter}
-                    <Info className="h-4 w-4" />
-                  </button>
+                  {loading ? (
+                    <div className="h-6 bg-white/20 rounded animate-pulse w-32"></div>
+                  ) : (
+                    <button 
+                      onClick={scrollToPromoter}
+                      className="text-lg font-medium underline hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
+                    >
+                      {demoEvent.promoter}
+                      <Info className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -213,22 +383,42 @@ export default function EventPage({ params }: EventPageProps) {
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     Funding Progress
-                    <Badge variant={showMarketplace ? "default" : "secondary"}>
-                      {showMarketplace ? "Market Open" : `${demoEvent.daysLeft} days left`}
-                    </Badge>
+                    {loading ? (
+                      <div className="h-6 bg-muted rounded animate-pulse w-24"></div>
+                    ) : (
+                      <Badge variant={showMarketplace ? "default" : "secondary"}>
+                        {showMarketplace ? "Market Open" : `${demoEvent.daysLeft} days left`}
+                      </Badge>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-2xl font-bold">${currentProgress.toLocaleString('en-US')} USDC</span>
-                      <span className="text-sm text-muted-foreground">of ${targetAmount.toLocaleString('en-US')}</span>
-                    </div>
-                    <Progress value={progressPercentage} className="h-3 progress-bar-glow" />
-                    <div className="flex justify-between items-center mt-2">
-                      <p className="text-sm text-muted-foreground">{progressPercentage.toFixed(1)}% funded</p>
-                      <p className="text-sm text-muted-foreground">{demoEvent.backers.toLocaleString('en-US')} backers</p>
-                    </div>
+                    {loading ? (
+                      <div className="space-y-4 animate-pulse">
+                        <div className="flex justify-between items-center mb-2">
+                          <div className="h-8 bg-muted rounded w-24"></div>
+                          <div className="h-4 bg-muted rounded w-16"></div>
+                        </div>
+                        <div className="h-3 bg-muted rounded"></div>
+                        <div className="flex justify-between items-center mt-2">
+                          <div className="h-4 bg-muted rounded w-20"></div>
+                          <div className="h-4 bg-muted rounded w-16"></div>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-2xl font-bold">${currentProgress.toLocaleString('en-US')} USDC</span>
+                          <span className="text-sm text-muted-foreground">of ${targetAmount.toLocaleString('en-US')}</span>
+                        </div>
+                        <Progress value={progressPercentage} className="h-3 progress-bar-glow" />
+                        <div className="flex justify-between items-center mt-2">
+                          <p className="text-sm text-muted-foreground">{progressPercentage.toFixed(1)}% funded</p>
+                          <p className="text-sm text-muted-foreground">{demoEvent.backers.toLocaleString('en-US')} backers</p>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {!showMarketplace ? (
@@ -242,16 +432,82 @@ export default function EventPage({ params }: EventPageProps) {
                           value={investmentAmount}
                           onChange={(e) => setInvestmentAmount(e.target.value)}
                           className="mt-1"
+                          disabled={!isConnected || !isCorrectNetwork}
+                          min="0.01"
+                          step="0.01"
                         />
+                        {investmentAmount && parseFloat(investmentAmount) <= 0 && (
+                          <p className="text-xs text-red-600 mt-1">
+                            Amount must be greater than 0
+                          </p>
+                        )}
                       </div>
+                      
+                      {/* Wallet Status Messages */}
+                      <ClientOnly fallback={
+                        <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                          <p className="text-sm text-gray-600 text-center">Loading wallet status...</p>
+                        </div>
+                      }>
+                        {walletError && (
+                          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <p className="text-sm text-red-800 text-center">{walletError}</p>
+                          </div>
+                        )}
+                        
+                        {isConnected && !isCorrectNetwork && (
+                          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <p className="text-sm text-yellow-800 text-center">
+                              Please switch to Base Sepolia network to contribute
+                            </p>
+                          </div>
+                        )}
+                        
+                        {isConnected && isCorrectNetwork && (
+                          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="text-center">
+                              <p className="text-sm text-green-800 mb-2">
+                                Connected: {address?.slice(0, 6)}...{address?.slice(-4)}
+                              </p>
+                              <button
+                                onClick={disconnectWallet}
+                                className="text-xs text-green-600 hover:text-green-800 underline transition-colors"
+                              >
+                                Disconnect wallet
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </ClientOnly>
                       <Button
-                        onClick={simulateInvestment}
-                        disabled={!investmentAmount || isSimulating}
+                        onClick={buttonConfig.onClick}
+                        disabled={buttonConfig.disabled}
+                        variant={buttonConfig.variant}
                         className="w-full fanio-button-glow"
                         size="lg"
                       >
-                        {isSimulating ? "Processing..." : "Fund This Event"}
+                        {buttonConfig.text}
                       </Button>
+                      
+                      {/* Success/Error Messages */}
+                      {contributionSuccess && (
+                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <p className="text-sm text-green-800 text-center">{contributionSuccess}</p>
+                        </div>
+                      )}
+                      
+                      {contributionError && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <p className="text-sm text-red-800 text-center">{contributionError}</p>
+                          <button 
+                            onClick={resetMessages}
+                            className="text-xs text-red-600 underline mt-1 block mx-auto"
+                          >
+                            Dismiss
+                          </button>
+                        </div>
+                      )}
+                      
                       <p className="text-xs text-muted-foreground text-center">
                         You'll receive ${campaignData?.tokenSymbol || 'TSBOG'} tokens equal to your USDC investment
                       </p>
@@ -510,48 +766,134 @@ export default function EventPage({ params }: EventPageProps) {
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   Funding Progress
-                  <Badge variant={showMarketplace ? "default" : "secondary"}>
-                    {showMarketplace ? "Market Open" : `${demoEvent.daysLeft} days left`}
-                  </Badge>
+                  {loading ? (
+                    <div className="h-6 bg-muted rounded animate-pulse w-24"></div>
+                  ) : (
+                    <Badge variant={showMarketplace ? "default" : "secondary"}>
+                      {showMarketplace ? "Market Open" : `${demoEvent.daysLeft} days left`}
+                    </Badge>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-2xl font-bold">${currentProgress.toLocaleString('en-US')} USDC</span>
-                    <span className="text-sm text-muted-foreground">of ${targetAmount.toLocaleString('en-US')}</span>
-                  </div>
-                  <Progress value={progressPercentage} className="h-3 progress-bar-glow" />
-                  <div className="flex justify-between items-center mt-2">
-                    <p className="text-sm text-muted-foreground">{progressPercentage.toFixed(1)}% funded</p>
-                    <p className="text-sm text-muted-foreground">{demoEvent.backers.toLocaleString('en-US')} backers</p>
-                  </div>
+                  {loading ? (
+                    <div className="space-y-4 animate-pulse">
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="h-8 bg-muted rounded w-24"></div>
+                        <div className="h-4 bg-muted rounded w-16"></div>
+                      </div>
+                      <div className="h-3 bg-muted rounded"></div>
+                      <div className="flex justify-between items-center mt-2">
+                        <div className="h-4 bg-muted rounded w-20"></div>
+                        <div className="h-4 bg-muted rounded w-16"></div>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-2xl font-bold">${currentProgress.toLocaleString('en-US')} USDC</span>
+                        <span className="text-sm text-muted-foreground">of ${targetAmount.toLocaleString('en-US')}</span>
+                      </div>
+                      <Progress value={progressPercentage} className="h-3 progress-bar-glow" />
+                      <div className="flex justify-between items-center mt-2">
+                        <p className="text-sm text-muted-foreground">{progressPercentage.toFixed(1)}% funded</p>
+                        <p className="text-sm text-muted-foreground">{demoEvent.backers.toLocaleString('en-US')} backers</p>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {!showMarketplace ? (
                   <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="investment">Investment Amount (USDC)</Label>
-                      <Input
-                        id="investment"
-                        type="number"
-                        placeholder="Enter amount"
-                        value={investmentAmount}
-                        onChange={(e) => setInvestmentAmount(e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
-                    <Button
-                      onClick={simulateInvestment}
-                      disabled={!investmentAmount || isSimulating}
+                                          <div>
+                        <Label htmlFor="investment">Investment Amount (USDC)</Label>
+                        <Input
+                          id="investment"
+                          type="number"
+                          placeholder="Enter amount"
+                          value={investmentAmount}
+                          onChange={(e) => setInvestmentAmount(e.target.value)}
+                          className="mt-1"
+                          disabled={!isConnected || !isCorrectNetwork}
+                          min="0.01"
+                          step="0.01"
+                        />
+                        {investmentAmount && parseFloat(investmentAmount) <= 0 && (
+                          <p className="text-xs text-red-600 mt-1">
+                            Amount must be greater than 0
+                          </p>
+                        )}
+                      </div>
+                      
+                                            {/* Wallet Status Messages */}
+                      <ClientOnly fallback={
+                        <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                          <p className="text-sm text-gray-600 text-center">Loading wallet status...</p>
+                        </div>
+                      }>
+                        {walletError && (
+                          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <p className="text-sm text-red-800 text-center">{walletError}</p>
+                          </div>
+                        )}
+                        
+                        {isConnected && !isCorrectNetwork && (
+                          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <p className="text-sm text-yellow-800 text-center">
+                              Please switch to Base Sepolia network to contribute
+                            </p>
+                          </div>
+                        )}
+                        
+                        {isConnected && isCorrectNetwork && (
+                          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="text-center">
+                              <p className="text-sm text-green-800 mb-2">
+                                Connected: {address?.slice(0, 6)}...{address?.slice(-4)}
+                              </p>
+                              <button
+                                onClick={disconnectWallet}
+                                className="text-xs text-green-600 hover:text-green-800 underline transition-colors"
+                              >
+                                Disconnect wallet
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </ClientOnly>
+                      <Button
+                      onClick={buttonConfig.onClick}
+                      disabled={buttonConfig.disabled}
+                      variant={buttonConfig.variant}
                       className="w-full fanio-button-glow"
                       size="lg"
                     >
-                      {isSimulating ? "Processing..." : "Fund This Event"}
+                      {buttonConfig.text}
                     </Button>
-                                          <p className="text-xs text-muted-foreground text-center">
-                        You'll receive $TSBOG tokens equal to your USDC investment
-                      </p>
+                    
+                    {/* Success/Error Messages */}
+                    {contributionSuccess && (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-sm text-green-800 text-center">{contributionSuccess}</p>
+                      </div>
+                    )}
+                    
+                    {contributionError && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-sm text-red-800 text-center">{contributionError}</p>
+                        <button 
+                          onClick={resetMessages}
+                          className="text-xs text-red-600 underline mt-1 block mx-auto"
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                    )}
+                    
+                    <p className="text-xs text-muted-foreground text-center">
+                      You'll receive ${campaignData?.tokenSymbol || 'TSBOG'} tokens equal to your USDC investment
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -713,6 +1055,34 @@ export default function EventPage({ params }: EventPageProps) {
           </div>
         </div>
       </footer>
+      
+      {/* Success Dialog */}
+      {successData && (
+        <SuccessDialog
+          isOpen={showSuccessDialog}
+          onClose={() => setShowSuccessDialog(false)}
+          title={successData.title}
+          message={successData.message}
+          transactionHash={successData.txHash}
+          onRefresh={() => {
+            setShowSuccessDialog(false);
+            // The data will be automatically updated by the hook
+          }}
+          networkExplorer="https://sepolia.basescan.org"
+        />
+      )}
+      
+      {/* Error Dialog */}
+      {errorData && (
+        <ErrorDialog
+          isOpen={showErrorDialog}
+          onClose={() => setShowErrorDialog(false)}
+          title={errorData.title}
+          message={errorData.message}
+          showRetry={errorData.type === 'contribution'} // Only show retry for contribution errors
+          onRetry={errorData.type === 'contribution' ? handleContribution : undefined}
+        />
+      )}
     </div>
   )
 }
