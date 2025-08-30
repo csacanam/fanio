@@ -23,6 +23,20 @@ contract Config is Script {
         returns (address fundingToken, address protocolWallet)
     {
         fundingToken = address(0); // Will be deployed separately for local testing
-        protocolWallet = address(0x3F696921Df10037961aF3b757689FC383709b75d); // Update with your wallet
+        protocolWallet = address(0x3F696921Df10037961aF3b757689FC383709b75d); // Your wallet
+    }
+
+    // Get FundingManager address for current network
+    function getFundingManagerAddress() external view returns (address) {
+        if (block.chainid == 31337) {
+            // Local/Anvil - return address(0) to indicate it needs to be deployed
+            return address(0);
+        } else if (block.chainid == 84532) {
+            // Base Sepolia - return the deployed address
+            return address(0x013089a6B8E738B638fBb84D94B9AAFa1dCE6060);
+        } else {
+            // Unknown network
+            revert("Unsupported network");
+        }
     }
 }
