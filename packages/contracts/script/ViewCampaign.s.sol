@@ -38,7 +38,8 @@ contract ViewCampaign is Script {
             uint256 targetAmount,
             uint256 organizerDeposit,
             address fundingToken,
-            uint256 protocolFeesCollected
+            uint256 protocolFeesCollected,
+            uint256 uniqueBackers
         ) {
             console.log("=== Campaign Status ===");
             console.log("Is Active:", isActive);
@@ -50,6 +51,7 @@ contract ViewCampaign is Script {
             console.log("Organizer Deposit:", organizerDeposit);
             console.log("Funding Token:", fundingToken);
             console.log("Protocol Fees Collected:", protocolFeesCollected);
+            console.log("Unique Backers:", uniqueBackers);
 
             // Calculate progress
             if (targetAmount > 0) {

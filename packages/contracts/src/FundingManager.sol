@@ -90,6 +90,9 @@ contract FundingManager is ReentrancyGuard {
         /// @notice Protocol fees collected (equal to organizerDeposit)
         /// @dev Only collected if campaign succeeds, sent to PROTOCOL_WALLET
         uint256 protocolFeesCollected;
+        /// @notice Number of unique contributors to this campaign
+        /// @dev Increments when a new address makes their first contribution
+        uint256 uniqueBackers;
     }
 
     // ========================================
@@ -286,7 +289,8 @@ contract FundingManager is ReentrancyGuard {
             isActive: true,
             isFunded: false,
             // 💰 Initialize accountability fields
-            protocolFeesCollected: 0
+            protocolFeesCollected: 0,
+            uniqueBackers: 0
         });
 
         emit CampaignCreated(
@@ -360,6 +364,11 @@ contract FundingManager is ReentrancyGuard {
         // Register contribution
         campaign.raisedAmount += amount;
         userContributions[msg.sender][campaignId] += amount;
+
+        // Increment unique backers count if this is the first contribution from this address
+        if (userContributions[msg.sender][campaignId] == amount) {
+            campaign.uniqueBackers++;
+        }
 
         // Mint tokens immediately to contributor (1:1 ratio)
         EventToken eventToken = EventToken(campaign.eventToken);
@@ -559,7 +568,8 @@ contract FundingManager is ReentrancyGuard {
             uint256 targetAmount,
             uint256 organizerDeposit,
             address fundingToken,
-            uint256 protocolFeesCollected
+            uint256 protocolFeesCollected,
+            uint256 uniqueBackers
         )
     {
         EventCampaign storage campaign = campaigns[campaignId];
@@ -585,7 +595,8 @@ contract FundingManager is ReentrancyGuard {
             targetAmount,
             organizerDeposit,
             fundingToken,
-            campaign.protocolFeesCollected
+            campaign.protocolFeesCollected,
+            campaign.uniqueBackers
         );
     }
 

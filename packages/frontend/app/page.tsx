@@ -15,8 +15,11 @@ import {
   Ticket,
 } from "lucide-react"
 import Link from "next/link"
+import { useCampaign } from "@/hooks/useCampaign"
 
 export default function FanioLanding() {
+  // Use real contract data for campaign ID 0
+  const { campaignData, loading, error } = useCampaign(0);
   const scrollToEvents = () => {
     const eventsSection = document.getElementById("active-events")
     if (eventsSection) {
@@ -31,7 +34,8 @@ export default function FanioLanding() {
     }
   }
 
-  const demoEvent = {
+  // Fallback data in case contract data is not available
+  const fallbackEvent = {
     id: "taylor-swift-colombia-2025",
     title: "Taylor Swift | The Eras Tour",
     artist: "Taylor Swift",
@@ -40,13 +44,26 @@ export default function FanioLanding() {
     location: "Bogotá, Colombia",
     description:
       "Experience the most anticipated pop concert in Colombia! Taylor Swift's first-ever performance in South America's most passionate music country.",
-    target: 100000,
-    current: 67500,
-    backers: 1247,
-    daysLeft: 23,
+    target: 100,
+    current: 0,
+    backers: 0,
+    daysLeft: 30,
     image: "/taylor-swift-concert-stage.png",
     slug: "taylor-swift-bogota-colombia-2025",
   }
+
+  // Use real data if available, fallback otherwise
+  const eventData = campaignData ? {
+    ...fallbackEvent,
+    current: parseFloat(campaignData.raisedAmount),
+    target: parseFloat(campaignData.targetAmount),
+    daysLeft: campaignData.daysLeft,
+    progress: campaignData.progress,
+    backers: campaignData.uniqueBackers,
+    isActive: campaignData.isActive,
+    isExpired: campaignData.isExpired,
+    isFunded: campaignData.isFunded,
+  } : fallbackEvent;
 
   return (
     <div className="min-h-screen bg-background">
@@ -135,40 +152,44 @@ export default function FanioLanding() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Link href={`/event/${demoEvent.slug}`}>
+            <Link href={`/event/${eventData.slug}`}>
               <Card className="cursor-pointer fanio-card-hover event-card">
               <div className="relative">
                 <img
-                  src={demoEvent.image || "/placeholder.svg"}
-                  alt={demoEvent.title}
+                  src={eventData.image || "/placeholder.svg"}
+                  alt={eventData.title}
                   className="w-full h-48 object-cover rounded-t-lg"
                 />
                   <Badge className="absolute top-3 right-3 fanio-gradient text-white border-0">
-                    {demoEvent.daysLeft} days left
+                    {loading ? "Loading..." : `${eventData.daysLeft} days left`}
                   </Badge>
               </div>
               <CardContent className="p-4">
-                <h3 className="font-bold text-lg mb-1 text-balance">{demoEvent.title}</h3>
+                <h3 className="font-bold text-lg mb-1 text-balance">{eventData.title}</h3>
                 <p className="text-muted-foreground text-sm mb-3">
-                  {demoEvent.venue} • {demoEvent.location}
+                  {eventData.venue} • {eventData.location}
                 </p>
+
+
 
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between text-sm">
-                      <span>${demoEvent.current.toLocaleString('en-US')} raised</span>
-                    <span>{((demoEvent.current / demoEvent.target) * 100).toFixed(0)}%</span>
+                      <span>${eventData.current.toLocaleString('en-US')} raised</span>
+                    <span>{eventData.progress}%</span>
                     </div>
-                    <Progress value={(demoEvent.current / demoEvent.target) * 100} className="h-2 progress-bar-glow" />
-                    <p className="text-xs text-muted-foreground">Goal: ${demoEvent.target.toLocaleString('en-US')} USDC</p>
+                    <Progress value={eventData.progress} className="h-2 progress-bar-glow" />
+                    <p className="text-xs text-muted-foreground">Goal: ${eventData.target.toLocaleString('en-US')} USDC</p>
                 </div>
 
                 <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>{demoEvent.backers.toLocaleString('en-US')} backers</span>
+                    <span>{eventData.backers.toLocaleString('en-US')} backers</span>
                   <span className="flex items-center gap-1">
                     <Ticket className="h-4 w-4" />
                     $TSBOG tokens
                   </span>
                 </div>
+
+
               </CardContent>
             </Card>
             </Link>

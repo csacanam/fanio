@@ -65,6 +65,7 @@ contract FundingManagerTest is Test {
             uint256 targetAmount,
             ,
             ,
+            ,
 
         ) = fundingManager.getCampaignStatus(campaignId);
 
@@ -93,7 +94,7 @@ contract FundingManagerTest is Test {
         fundingManager.contribute(campaignId, CONTRIBUTION_AMOUNT);
 
         // Verify contribution was recorded
-        (bool isActive, , , , uint256 raisedAmount, , , , ) = fundingManager
+        (bool isActive, , , , uint256 raisedAmount, , , , , ) = fundingManager
             .getCampaignStatus(campaignId);
 
         assertTrue(isActive);
@@ -137,6 +138,7 @@ contract FundingManagerTest is Test {
             bool isFunded,
             ,
             uint256 raisedAmount,
+            ,
             ,
             ,
             ,
@@ -213,7 +215,7 @@ contract FundingManagerTest is Test {
         fundingManager.closeExpiredCampaign(campaignId);
 
         // Verify campaign is closed
-        (bool isActive, , , , , , , , ) = fundingManager.getCampaignStatus(
+        (bool isActive, , , , , , , , , ) = fundingManager.getCampaignStatus(
             campaignId
         );
         assertFalse(isActive);
@@ -248,7 +250,7 @@ contract FundingManagerTest is Test {
         // Verify that the campaign was actually closed during the failed contribution
         // Note: getCampaignStatus returns the state before the contribution attempt
         // but the campaign was closed during _checkCampaignStatus execution
-        (, bool isExpired, , , , , , , ) = fundingManager.getCampaignStatus(
+        (, bool isExpired, , , , , , , , ) = fundingManager.getCampaignStatus(
             campaignId
         );
 

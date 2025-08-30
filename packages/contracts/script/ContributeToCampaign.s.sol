@@ -83,7 +83,8 @@ contract ContributeToCampaign is Script {
             uint256 targetAmount,
             uint256 organizerDeposit,
             address fundingTokenAddr,
-            uint256 protocolFeesCollected
+            uint256 protocolFeesCollected,
+            uint256 uniqueBackers
         ) {
             console.log("=== Updated Campaign Status ===");
             console.log("Raised Amount:", raisedAmount / 1e6, "USDC");
