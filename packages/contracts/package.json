@@ -1,0 +1,20 @@
+{
+  "name": "fanio-contracts",
+  "version": "1.0.0",
+  "description": "Smart contracts for Fanio crowdfunding platform",
+  "scripts": {
+    "deploy:local": "forge script script/DeployFundingManager.s.sol --rpc-url anvil --broadcast && node scripts/update-frontend-config.js",
+    "deploy:base-sepolia": "forge script script/DeployFundingManager.s.sol --rpc-url base_sepolia --broadcast && node scripts/update-frontend-config.js",
+    "update-frontend": "node scripts/update-frontend-config.js",
+    "test": "forge test",
+    "test:verbose": "forge test -v",
+    "compile": "forge build",
+    "clean": "forge clean"
+  },
+  "keywords": ["solidity", "ethereum", "crowdfunding", "foundry"],
+  "author": "Fanio Team",
+  "license": "MIT",
+  "devDependencies": {
+    "foundry": "^0.2.0"
+  }
+}
