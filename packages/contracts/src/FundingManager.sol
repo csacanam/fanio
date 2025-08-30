@@ -131,9 +131,14 @@ contract FundingManager is ReentrancyGuard {
         // Check and update campaign status before processing
         _checkCampaignStatus(campaignId);
 
-        require(campaign.isActive, "Campaign not active");
         require(amount > 0, "Amount must be positive");
         require(!campaign.isFunded, "Campaign already funded");
+
+        // Validate that contribution doesn't exceed funding target
+        require(
+            campaign.raisedAmount + amount <= campaign.targetAmount,
+            "Contribution would exceed funding target"
+        );
 
         // Transfer tokens from contributor using campaign's funding token
         IERC20 campaignToken = IERC20(campaign.fundingToken);
