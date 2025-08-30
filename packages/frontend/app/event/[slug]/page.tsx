@@ -74,16 +74,50 @@ export default function EventPage({ params }: EventPageProps) {
     explorerUrl
   } = useContribution(0);
   
-  // Function to refresh campaign data
+  // Function to refresh campaign data with retry logic
   const refreshCampaignData = async () => {
     console.log('Refreshing campaign data from blockchain...');
-    try {
-      // Call the hook's refetch function to get fresh data
-      await refetch();
-      console.log('Campaign data refreshed successfully');
-    } catch (err) {
-      console.error('Error refreshing campaign data:', err);
+    
+    // Try multiple times with delays to ensure blockchain state is updated
+    const maxRetries = 3;
+    const baseDelay = 2000; // 2 seconds base delay
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`Refresh attempt ${attempt}/${maxRetries}...`);
+        
+        // Call the hook's refetch function to get fresh data
+        await refetch();
+        console.log('Campaign data refreshed successfully');
+        
+        // Verify the data actually changed by checking current state
+        if (campaignData?.raisedAmount !== undefined) {
+          console.log('Data change confirmed, refresh successful');
+          return; // Exit on successful refresh
+        } else {
+          console.log('Data unchanged, will retry...');
+        }
+        
+        // Wait before next attempt (exponential backoff)
+        if (attempt < maxRetries) {
+          const delay = baseDelay * attempt;
+          console.log(`Waiting ${delay}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+        
+      } catch (err) {
+        console.error(`Error refreshing campaign data (attempt ${attempt}):`, err);
+        
+        // Wait before retry
+        if (attempt < maxRetries) {
+          const delay = baseDelay * attempt;
+          console.log(`Waiting ${delay}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
     }
+    
+    console.log('All refresh attempts completed');
   };
   
   const [investmentAmount, setInvestmentAmount] = useState("")
@@ -150,9 +184,11 @@ export default function EventPage({ params }: EventPageProps) {
       setShowSuccessDialog(true);
       setInvestmentAmount(""); // Clear input
       
-      // Refresh campaign data immediately since transaction is confirmed
-      console.log('Transaction confirmed, refreshing campaign data...');
-      refreshCampaignData(); // Call without await since useEffect can't be async
+      // Refresh campaign data with delay to ensure blockchain state is updated
+      console.log('Transaction confirmed, will refresh campaign data in 3 seconds...');
+      setTimeout(() => {
+        refreshCampaignData();
+      }, 3000); // Wait 3 seconds for blockchain to update
     }
   }, [contributionSuccess, transactionHash]);
 
@@ -1087,8 +1123,6 @@ export default function EventPage({ params }: EventPageProps) {
           onClose={() => setShowErrorDialog(false)}
           title={errorData.title}
           message={errorData.message}
-          showRetry={errorData.type === 'contribution'} // Only show retry for contribution errors
-          onRetry={errorData.type === 'contribution' ? handleContribution : undefined}
         />
       )}
     </div>

@@ -103,12 +103,12 @@ export const useContribution = (campaignId: number = 0) => {
       // If we get here, allowance was never confirmed
       console.log('Allowance never confirmed after all attempts');
       setApprovalPending(false);
-      throw new Error('Approval transaction confirmed but allowance was never updated. Please try again.');
+              throw new Error('Approval confirmed but blockchain is taking time to update. Please wait a moment.');
     } catch (err: any) {
       console.error('Approval error:', err);
       
       // Provide user-friendly error messages
-      let userMessage = 'Failed to approve USDC spend. Please try again.';
+      let userMessage = 'Failed to approve USDC spend.';
       
       if (err.message) {
         if (err.message.includes('user rejected') || err.message.includes('User denied') || err.message.includes('ACTION_REJECTED')) {
@@ -116,9 +116,9 @@ export const useContribution = (campaignId: number = 0) => {
         } else if (err.message.includes('insufficient funds')) {
           userMessage = 'Insufficient funds in your wallet. Please check your USDC balance.';
         } else if (err.message.includes('network error')) {
-          userMessage = 'Network error. Please check your connection and try again.';
+          userMessage = 'Network error. Please check your connection.';
         } else if (err.message.includes('allowance was never updated')) {
-          userMessage = 'Approval confirmed but blockchain is taking time to update. Please wait a moment and try again.';
+          userMessage = 'Approval confirmed but blockchain is taking time to update. Please wait a moment.';
         } else {
           userMessage = err.message;
         }
@@ -218,17 +218,48 @@ export const useContribution = (campaignId: number = 0) => {
       console.error('Contribution error:', err);
       
       // Translate technical errors to user-friendly messages
-      let userMessage = 'Failed to contribute. Please try again.';
+      let userMessage = 'Failed to contribute.';
       
       if (err.message) {
         if (err.message.includes('execution reverted')) {
-          userMessage = 'The transaction failed. This usually means the campaign is no longer active or there was an issue with the contract. Please try again or contact support.';
+          // Check for specific contract error messages from FundingManager
+          if (err.message.includes('Contribution would exceed maximum allowed amount')) {
+            userMessage = 'This contribution would exceed the campaign goal. The campaign closes when it reaches 130 USDC.';
+          } else if (err.message.includes('Campaign is not active')) {
+            userMessage = 'This campaign is no longer active. Contributions are not accepted.';
+          } else if (err.message.includes('Campaign already funded')) {
+            userMessage = 'This campaign is already fully funded. No more contributions needed.';
+          } else if (err.message.includes('Amount must be positive')) {
+            userMessage = 'Contribution amount must be greater than 0.';
+          } else if (err.message.includes('Transfer failed')) {
+            userMessage = 'USDC transfer failed. Please check your balance.';
+          } else if (err.message.includes('Deposit transfer failed')) {
+            userMessage = 'Deposit transfer failed. Please check your balance.';
+          } else if (err.message.includes('Target amount must be positive')) {
+            userMessage = 'Invalid campaign configuration.';
+          } else if (err.message.includes('Duration must be positive')) {
+            userMessage = 'Invalid campaign configuration.';
+          } else if (err.message.includes('Invalid funding token')) {
+            userMessage = 'Invalid campaign configuration.';
+          } else if (err.message.includes('Invalid protocol wallet')) {
+            userMessage = 'Invalid contract configuration.';
+          } else if (err.message.includes('Invalid funding manager address')) {
+            userMessage = 'Invalid token configuration.';
+          } else if (err.message.includes('Cannot mint to zero address')) {
+            userMessage = 'Token minting failed.';
+          } else if (err.message.includes('Exceeds max supply')) {
+            userMessage = 'Token minting failed.';
+          } else if (err.message.includes('Only FundingManager can mint')) {
+            userMessage = 'Token minting failed.';
+          } else {
+            userMessage = 'The transaction failed. Please check the campaign status.';
+          }
         } else if (err.message.includes('insufficient funds')) {
           userMessage = 'Insufficient funds in your wallet. Please check your USDC balance.';
         } else if (err.message.includes('user rejected') || err.message.includes('User denied') || err.message.includes('ACTION_REJECTED')) {
-          userMessage = 'Transaction was cancelled. Please try again when you\'re ready.';
+          userMessage = 'Transaction was cancelled.';
         } else if (err.message.includes('network error')) {
-          userMessage = 'Network error. Please check your connection and try again.';
+          userMessage = 'Network error. Please check your connection.';
         } else if (err.message.includes('insufficient allowance')) {
           userMessage = 'USDC approval required. Please approve USDC spend first.';
         } else {
