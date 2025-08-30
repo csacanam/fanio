@@ -310,11 +310,11 @@ contract FundingManager is ReentrancyGuard {
      * 1. Checks and updates campaign status (may close expired campaigns)
      * 2. Validates campaign is still active after status check
      * 3. Validates campaign is not already funded
-     * 4. Checks contribution doesn't exceed funding target
+     * 4. Checks contribution doesn't exceed maximum allowed amount (target + 30% for pool)
      * 5. Transfers funding tokens from contributor to contract
      * 6. Updates campaign raised amount and user contribution tracking
      * 7. Mints EventTokens to contributor (1:1 ratio)
-     * 8. Automatically finalizes funding if target is reached
+     * 8. Automatically finalizes funding if target is reached (even with excess)
      *
      * @param campaignId ID of the campaign to contribute to
      * @param amount Contribution amount in funding token units
@@ -343,10 +343,11 @@ contract FundingManager is ReentrancyGuard {
         require(amount > 0, "Amount must be positive");
         require(!campaign.isFunded, "Campaign already funded");
 
-        // Validate that contribution doesn't exceed funding target
+        // Validate that contribution doesn't exceed maximum allowed amount (target + 30% for pool)
         require(
-            campaign.raisedAmount + amount <= campaign.targetAmount,
-            "Contribution would exceed funding target"
+            campaign.raisedAmount + amount <=
+                campaign.targetAmount + (campaign.targetAmount * 30) / 100,
+            "Contribution would exceed maximum allowed amount"
         );
 
         // Transfer tokens from contributor using campaign's funding token
@@ -367,8 +368,8 @@ contract FundingManager is ReentrancyGuard {
 
         emit ContributionMade(campaignId, msg.sender, amount, userTokens);
 
-        // Check if funding target is reached
-        if (campaign.raisedAmount == campaign.targetAmount) {
+        // Check if funding target is reached (can finalize when target is met, even with excess)
+        if (campaign.raisedAmount >= campaign.targetAmount) {
             _finalizeFunding(campaignId);
         }
     }
@@ -382,8 +383,9 @@ contract FundingManager is ReentrancyGuard {
      * 1. Mints pool tokens (25% of target) for initial Uniswap V4 liquidity
      * 2. Collects protocol fee (10% of target) from organizer's deposit
      * 3. Sends full target amount to organizer
-     * 4. Updates campaign state and accounting fields
-     * 5. Emits relevant events for tracking
+     * 4. Keeps excess USDC (up to 30% of target) for pool creation
+     * 5. Updates campaign state and accounting fields
+     * 6. Emits relevant events for tracking
      *
      * @param campaignId ID of the campaign to finalize
      *
@@ -391,9 +393,10 @@ contract FundingManager is ReentrancyGuard {
      * @notice Pool tokens are minted to this contract for future Uniswap V4 pool creation
      * @notice Protocol fee equals the organizer's initial deposit (10% of target)
      * @notice Organizer receives exactly the target amount (100% of goal)
+     * @notice Excess USDC (up to 30% of target) is kept for pool creation
      *
      * @custom:security Internal function - cannot be called directly by users
-     * @custom:security Only called when campaign.raisedAmount == campaign.targetAmount
+     * @custom:security Only called when campaign.raisedAmount >= campaign.targetAmount
      */
     function _finalizeFunding(uint256 campaignId) internal {
         EventCampaign storage campaign = campaigns[campaignId];
@@ -584,6 +587,18 @@ contract FundingManager is ReentrancyGuard {
             fundingToken,
             campaign.protocolFeesCollected
         );
+    }
+
+    /**
+     * @dev Get EventToken address for a specific campaign
+     *
+     * @param campaignId ID of the campaign
+     * @return Address of the EventToken contract for this campaign
+     */
+    function getCampaignEventToken(
+        uint256 campaignId
+    ) external view returns (address) {
+        return campaigns[campaignId].eventToken;
     }
 }
 
