@@ -307,12 +307,14 @@ contract FundingManager is ReentrancyGuard {
      * receive EventTokens in return at a 1:1 ratio with their contribution.
      *
      * Flow:
-     * 1. Validates campaign is active and not funded
-     * 2. Checks contribution doesn't exceed funding target
-     * 3. Transfers funding tokens from contributor to contract
-     * 4. Updates campaign raised amount and user contribution tracking
-     * 5. Mints EventTokens to contributor (1:1 ratio)
-     * 6. Automatically finalizes funding if target is reached
+     * 1. Checks and updates campaign status (may close expired campaigns)
+     * 2. Validates campaign is still active after status check
+     * 3. Validates campaign is not already funded
+     * 4. Checks contribution doesn't exceed funding target
+     * 5. Transfers funding tokens from contributor to contract
+     * 6. Updates campaign raised amount and user contribution tracking
+     * 7. Mints EventTokens to contributor (1:1 ratio)
+     * 8. Automatically finalizes funding if target is reached
      *
      * @param campaignId ID of the campaign to contribute to
      * @param amount Contribution amount in funding token units
@@ -334,6 +336,9 @@ contract FundingManager is ReentrancyGuard {
 
         // Check and update campaign status before processing
         _checkCampaignStatus(campaignId);
+
+        // Verify campaign is still active after status check
+        require(campaign.isActive, "Campaign is not active");
 
         require(amount > 0, "Amount must be positive");
         require(!campaign.isFunded, "Campaign already funded");
@@ -439,7 +444,7 @@ contract FundingManager is ReentrancyGuard {
      * Flow:
      * 1. Validates campaign has passed its deadline
      * 2. Confirms campaign hasn't been funded
-     * 3. Marks campaign as inactive (if not already inactive)
+     * 3. Uses unified logic to close expired campaign
      * 4. Emits expiration event
      *
      * @param campaignId ID of the expired campaign to close
@@ -465,11 +470,8 @@ contract FundingManager is ReentrancyGuard {
         );
         require(!campaign.isFunded, "Campaign already funded");
 
-        // Only mark as inactive if not already inactive
-        if (campaign.isActive) {
-            campaign.isActive = false;
-            emit CampaignExpired(campaignId, campaign.raisedAmount);
-        }
+        // Use unified logic to close the campaign
+        _checkCampaignStatus(campaignId);
 
         // TODO: Implement refund logic for contributors
     }
@@ -485,7 +487,10 @@ contract FundingManager is ReentrancyGuard {
      * 1. Checks if current time >= campaign deadline
      * 2. Verifies campaign is still active
      * 3. Confirms campaign hasn't been funded
-     * 4. Calls closeExpiredCampaign function if expired
+     * 4. Closes campaign and emits event if expired
+     *
+     * This function contains the unified logic for closing expired campaigns
+     * and is used by both automatic expiration checks and manual expiration.
      *
      * @param campaignId ID of the campaign to check
      *
@@ -493,7 +498,7 @@ contract FundingManager is ReentrancyGuard {
      * @notice Only affects active, unfunded campaigns that have passed their deadline
      * @notice Campaigns that are already funded cannot expire
      * @notice This function prevents contributions to expired campaigns
-     * @notice Calls closeExpiredCampaign function for consistency
+     * @notice Marks expired campaigns as inactive directly for consistency
      *
      * @custom:security Internal function - cannot be called directly by users
      * @custom:security Automatically called in contribute() function
@@ -502,13 +507,15 @@ contract FundingManager is ReentrancyGuard {
      */
     function _checkCampaignStatus(uint256 campaignId) internal {
         EventCampaign storage campaign = campaigns[campaignId];
+
+        // Check if campaign has expired and close it if necessary
         if (
             block.timestamp >= campaign.deadline &&
             campaign.isActive &&
             !campaign.isFunded
         ) {
-            // Call the public closeExpiredCampaign function for consistency
-            this.closeExpiredCampaign(campaignId);
+            campaign.isActive = false;
+            emit CampaignExpired(campaignId, campaign.raisedAmount);
         }
     }
 
