@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ethers } from 'ethers';
-import { CONTRACTS, DEFAULT_NETWORK } from '@/config/contracts';
+import { CONTRACTS, DEFAULT_NETWORK, getExplorerUrl } from '@/config/contracts';
 
 // ABI for FundingManager contract (simplified for contribution)
 const FUNDING_MANAGER_ABI = [
@@ -23,12 +23,15 @@ export const useContribution = (campaignId: number = 0) => {
   const [approvalPending, setApprovalPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [transactionHash, setTransactionHash] = useState<string | null>(null);
 
   // Separate approve function
   const approveUSDC = async (amount: string, userAddress: string) => {
     try {
       setIsApproving(true);
       setError(null);
+      setSuccess(null); // Reset success message
+      setTransactionHash(null); // Reset transaction hash
 
       // Create provider and signer
       const provider = new ethers.BrowserProvider(window.ethereum);
@@ -133,6 +136,7 @@ export const useContribution = (campaignId: number = 0) => {
       setIsContributing(true);
       setError(null);
       setSuccess(null);
+      setTransactionHash(null); // Reset transaction hash
 
       // Create provider and signer
       const provider = new ethers.BrowserProvider(window.ethereum);
@@ -207,7 +211,8 @@ export const useContribution = (campaignId: number = 0) => {
       const txHash = receipt?.hash || receipt?.transactionHash || 'Unknown';
       console.log('Transaction hash:', txHash);
 
-      setSuccess(`Successfully contributed ${amount} USDC! Transaction: ${txHash.slice(0, 10)}...`);
+      setTransactionHash(txHash); // Store the full transaction hash
+      setSuccess(`Successfully contributed ${amount} USDC!`);
 
     } catch (err: any) {
       console.error('Contribution error:', err);
@@ -251,6 +256,8 @@ export const useContribution = (campaignId: number = 0) => {
     approvalPending,
     error,
     success,
-    resetMessages
+    resetMessages,
+    transactionHash,
+    explorerUrl: getExplorerUrl(DEFAULT_NETWORK)
   };
 };

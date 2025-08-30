@@ -45,7 +45,7 @@ interface EventPageProps {
 
 export default function EventPage({ params }: EventPageProps) {
   // Use real contract data for campaign ID 0
-  const { campaignData, loading, error } = useCampaign(0);
+  const { campaignData, loading, error, refetch } = useCampaign(0);
   
   // Wallet connection
   const { 
@@ -69,15 +69,20 @@ export default function EventPage({ params }: EventPageProps) {
     approvalPending,
     error: contributionError, 
     success: contributionSuccess, 
-    resetMessages 
+    resetMessages,
+    transactionHash,
+    explorerUrl
   } = useContribution(0);
   
   // Function to refresh campaign data
-  const refreshCampaignData = () => {
-    // Trigger a re-fetch of campaign data using the hook's refetch function
-    if (campaignData) {
-      // This will update the UI with fresh data
-      console.log('Refreshing campaign data...');
+  const refreshCampaignData = async () => {
+    console.log('Refreshing campaign data from blockchain...');
+    try {
+      // Call the hook's refetch function to get fresh data
+      await refetch();
+      console.log('Campaign data refreshed successfully');
+    } catch (err) {
+      console.error('Error refreshing campaign data:', err);
     }
   };
   
@@ -133,27 +138,22 @@ export default function EventPage({ params }: EventPageProps) {
 
   // Handle contribution success/error from hook
   useEffect(() => {
-    if (contributionSuccess) {
-      // Extract transaction hash from success message
-      const txHashMatch = contributionSuccess.match(/Transaction: ([a-fA-F0-9]+)\.\.\./);
-      const txHash = txHashMatch ? txHashMatch[1] : undefined;
+    if (contributionSuccess && transactionHash) {
+      console.log('Contribution success with hash:', transactionHash);
       
       setSuccessData({
         title: "Contribution Successful!",
         message: contributionSuccess,
-        txHash
+        txHash: transactionHash
       });
       setShowSuccessDialog(true);
       setInvestmentAmount(""); // Clear input
       
-      // Auto-refresh campaign data after a short delay to show updated values
-      setTimeout(() => {
-        console.log('Auto-refreshing campaign data...');
-        // Trigger a re-fetch by updating the campaign ID (this will cause a re-render)
-        // We'll use a different approach - just close the dialog and let the user see the updated data
-      }, 2000); // 2 second delay
+      // Refresh campaign data immediately since transaction is confirmed
+      console.log('Transaction confirmed, refreshing campaign data...');
+      refreshCampaignData(); // Call without await since useEffect can't be async
     }
-  }, [contributionSuccess]);
+  }, [contributionSuccess, transactionHash]);
 
   useEffect(() => {
     if (contributionError) {
@@ -1066,10 +1066,17 @@ export default function EventPage({ params }: EventPageProps) {
           transactionHash={successData.txHash}
           onRefresh={() => {
             setShowSuccessDialog(false);
-            // The data will be automatically updated by the hook
+            // Data is already refreshed when dialog opened
           }}
-          networkExplorer="https://sepolia.basescan.org"
+          networkExplorer={explorerUrl}
         />
+      )}
+      
+      {/* Debug: Show explorer URL */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed bottom-4 right-4 bg-black text-white p-2 rounded text-xs">
+          Explorer URL: {explorerUrl}
+        </div>
       )}
       
       {/* Error Dialog */}

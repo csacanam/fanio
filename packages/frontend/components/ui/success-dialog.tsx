@@ -22,8 +22,11 @@ export function SuccessDialog({
   message,
   transactionHash,
   onRefresh,
-  networkExplorer = "https://sepolia.basescan.org"
+  networkExplorer
 }: SuccessDialogProps) {
+  
+  // Debug log
+  console.log('SuccessDialog props:', { title, message, transactionHash, networkExplorer });
   
     // Remove auto-close functionality
   // useEffect(() => {
@@ -36,8 +39,10 @@ export function SuccessDialog({
   //   }
   // }, [isOpen, onClose]);
   const handleViewOnExplorer = () => {
-    if (transactionHash) {
-      window.open(`${networkExplorer}/tx/${transactionHash}`, '_blank');
+    if (transactionHash && networkExplorer) {
+      const explorerUrl = `${networkExplorer}/tx/${transactionHash}`;
+      console.log('Opening explorer:', explorerUrl);
+      window.open(explorerUrl, '_blank');
     }
   };
 
@@ -63,17 +68,7 @@ export function SuccessDialog({
             {message}
           </p>
           
-          {/* Removed auto-close message */}
-          
-          {transactionHash && (
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-500 mb-2">Transaction Hash:</p>
-              <p className="text-xs font-mono text-gray-700 break-all">
-                {transactionHash}
-              </p>
-            </div>
-          )}
-          
+          {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-2">
             {transactionHash && (
               <Button
