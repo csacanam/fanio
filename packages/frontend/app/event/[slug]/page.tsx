@@ -135,6 +135,21 @@ export default function EventPage({ params }: EventPageProps) {
   const organizerTarget = campaignData ? parseFloat(campaignData.targetAmount) : 0 // What organizer wants (100 USDC)
   const progressPercentage = campaignData ? campaignData.progress : 0
 
+  // Automatically open marketplace when campaign is funded
+  useEffect(() => {
+    if (campaignData?.isFunded) {
+      console.log('🎉 Campaign is funded! Opening marketplace...');
+      setShowMarketplace(true);
+    }
+  }, [campaignData?.isFunded]);
+
+  // Log when marketplace state changes
+  useEffect(() => {
+    if (showMarketplace) {
+      console.log('🚀 Marketplace is now open!');
+    }
+  }, [showMarketplace]);
+
   // Handle USDC approval
   const handleApproval = async () => {
     if (!investmentAmount || parseFloat(investmentAmount) <= 0 || isApproving || !isConnected || !isCorrectNetwork) return
