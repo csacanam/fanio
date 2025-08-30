@@ -166,7 +166,7 @@ export default function FanioLanding() {
                     <span>{demoEvent.backers.toLocaleString('en-US')} backers</span>
                   <span className="flex items-center gap-1">
                     <Ticket className="h-4 w-4" />
-                    $TSWIFT25 tokens
+                    $TSBOG tokens
                   </span>
                 </div>
               </CardContent>

@@ -201,7 +201,7 @@ export default function EventPage({ params }: EventPageProps) {
                   <Gift className="h-5 w-5" />
                   Token Perks & Utilities
                 </CardTitle>
-                <CardDescription>What you can do with your $BBNY25 tokens</CardDescription>
+                <CardDescription>What you can do with your $TSBOG tokens</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-2 gap-4">
@@ -270,7 +270,7 @@ export default function EventPage({ params }: EventPageProps) {
                         <DollarSign className="ml-2 h-4 w-4" />
                       </Button>
                       <p className="text-xs text-muted-foreground text-center">
-                        You'll receive $BBNY25 tokens equal to your USDC investment
+                        You'll receive $TSBOG tokens equal to your USDC investment
                       </p>
                     </div>
                   ) : (
@@ -279,15 +279,15 @@ export default function EventPage({ params }: EventPageProps) {
                         <TrendingUp className="h-8 w-8 text-primary mx-auto mb-2" />
                         <h3 className="font-semibold text-primary">Funding Complete!</h3>
                         <p className="text-sm text-muted-foreground mt-1">
-                          $BBNY25 tokens are now trading on the open market
+                          $TSBOG tokens are now trading on the open market
                         </p>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <Button variant="outline" size="sm">
-                          Buy $BBNY25
+                          Buy $TSBOG
                         </Button>
                         <Button variant="outline" size="sm">
-                          Sell $BBNY25
+                          Sell $TSBOG
                         </Button>
                       </div>
                       <div className="text-center text-sm text-muted-foreground">
@@ -319,7 +319,7 @@ export default function EventPage({ params }: EventPageProps) {
                     </div>
                     <div>
                       <p className="font-medium">Fund the Event</p>
-                      <p className="text-sm text-muted-foreground">Buy $BBNY25 tokens with USDC</p>
+                      <p className="text-sm text-muted-foreground">Buy $TSBOG tokens with USDC</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -361,7 +361,7 @@ export default function EventPage({ params }: EventPageProps) {
                     <Gift className="h-5 w-5" />
                     Token Perks & Utilities
                   </CardTitle>
-                  <CardDescription>What you can do with your $BBNY25 tokens</CardDescription>
+                  <CardDescription>What you can do with your $TSBOG tokens</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="grid md:grid-cols-2 gap-4">
@@ -394,7 +394,7 @@ export default function EventPage({ params }: EventPageProps) {
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground leading-relaxed">
-                    {demoEvent.description} By funding this event, you'll receive $BBNY25 tokens that give you exclusive
+                    {demoEvent.description} By funding this event, you'll receive $TSBOG tokens that give you exclusive
                     perks and the ability to trade on the open market once funding is complete.
                   </p>
                 </CardContent>
@@ -410,7 +410,7 @@ export default function EventPage({ params }: EventPageProps) {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground leading-relaxed">
-                  {demoEvent.description} By funding this proposal, you'll receive $BBNY25 tokens that give you exclusive
+                  {demoEvent.description} By funding this proposal, you'll receive $TSBOG tokens that give you exclusive
                   perks and the ability to trade on the open market once funding is complete.
                 </p>
               </CardContent>
@@ -465,27 +465,27 @@ export default function EventPage({ params }: EventPageProps) {
                       {isSimulating ? "Processing..." : "Fund This Event"}
                       <DollarSign className="ml-2 h-4 w-4" />
                     </Button>
-                    <p className="text-xs text-muted-foreground text-center">
-                      You'll receive $BBNY25 tokens equal to your USDC investment
-                    </p>
+                                          <p className="text-xs text-muted-foreground text-center">
+                        You'll receive $TSBOG tokens equal to your USDC investment
+                      </p>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     <div className="text-center p-4 bg-primary/10 rounded-lg">
                       <TrendingUp className="h-8 w-8 text-primary mx-auto mb-2" />
                       <h3 className="font-semibold text-primary">Funding Complete!</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        $BBNY25 tokens are now trading on the open market
-                      </p>
+                                                                                             <p className="text-sm text-muted-foreground mt-1">
+                           $TSBOG tokens are now trading on the open market
+                         </p>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button variant="outline" size="sm">
-                        Buy $BBNY25
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        Sell $BBNY25
-                      </Button>
-                    </div>
+                                                                                     <div className="grid grid-cols-2 gap-2">
+                         <Button variant="outline" size="sm">
+                           Buy $TSBOG
+                         </Button>
+                         <Button variant="outline" size="sm">
+                           Sell $TSBOG
+                         </Button>
+                       </div>
                     <div className="text-center text-sm text-muted-foreground">
                       <p>Current Price: $1.20 USDC</p>
                       <p className="text-primary">+20% from funding price</p>
@@ -511,8 +511,8 @@ export default function EventPage({ params }: EventPageProps) {
                     1
                   </div>
                   <div>
-                    <p className="font-medium">Fund the Event</p>
-                    <p className="text-sm text-muted-foreground">Buy $BBNY25 tokens with USDC</p>
+                                          <p className="font-medium">Fund the Event</p>
+                      <p className="text-sm text-muted-foreground">Buy $TSBOG tokens with USDC</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
