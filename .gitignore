@@ -1,14 +1,20 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules/
+**/node_modules/
 
 # next.js
-/.next/
-/out/
+.next/
+**/.next/
+out/
+**/out/
 
 # production
-/build
+build/
+**/build/
+dist/
+**/dist/
 
 # debug
 npm-debug.log*
@@ -25,3 +31,29 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Package manager lock files (optional - you might want to keep these)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Blockchain specific (for future contracts)
+cache/
+artifacts/
+typechain/
+typechain-types/
