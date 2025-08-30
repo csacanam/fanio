@@ -18,26 +18,20 @@ contract FundingManager is ReentrancyGuard {
 
     // Campaign storage
     struct EventCampaign {
-        address eventToken;
-        address organizer;
+        // 🏗️ CORE CAMPAIGN INFO
+        address eventToken; // Address of the EventToken contract
+        address organizer; // Campaign organizer address
         address fundingToken; // Custom funding token for this campaign
-        uint256 targetAmount;
-        uint256 raisedAmount;
-        uint256 organizerDeposit; // Amount deposited by organizer
-        uint256 deadline;
-        bool isActive;
-        bool isFunded;
+        uint256 targetAmount; // Funding goal amount
+        uint256 organizerDeposit; // Amount deposited by organizer (10% of target)
+        uint256 deadline; // Campaign end timestamp
+        bool isActive; // Whether campaign is currently active
+        bool isFunded; // Whether campaign reached funding target
+        // 💰 ACCOUNTABILITY - Money tracking and financial state
+        uint256 raisedAmount; // Total amount raised so far
+        uint256 protocolFeesCollected; // Protocol fees collected (10% of target)
         bool fundsWithdrawn; // Whether organizer has withdrawn funds
-        uint256 withdrawalTimestamp; // When funds were withdrawn
     }
-
-    // Pool preparation storage
-    struct PoolPreparation {
-        uint256 fundingTokens;
-        uint256 eventTokens;
-    }
-
-    mapping(uint256 => PoolPreparation) public poolPreparation;
 
     mapping(uint256 => EventCampaign) public campaigns;
     mapping(address => mapping(uint256 => uint256)) public userContributions;
@@ -134,7 +128,8 @@ contract FundingManager is ReentrancyGuard {
             isActive: true,
             isFunded: false,
             fundsWithdrawn: false,
-            withdrawalTimestamp: 0
+            // 💰 Initialize accountability fields
+            protocolFeesCollected: 0
         });
 
         emit CampaignCreated(
@@ -224,11 +219,10 @@ contract FundingManager is ReentrancyGuard {
             campaign.targetAmount
         );
 
-        // 4. Prepare for pool (save in storage for future hook)
-        poolPreparation[campaignId] = PoolPreparation({
-            fundingTokens: (campaign.targetAmount * 30) / 100,
-            eventTokens: (campaign.targetAmount * 25) / 100
-        });
+        // 4. Pool data is now stored in EventCampaign struct
+
+        // 💰 Update accountability fields
+        campaign.protocolFeesCollected = protocolFee;
 
         emit CampaignFunded(campaignId, campaign.raisedAmount);
 
@@ -256,7 +250,6 @@ contract FundingManager is ReentrancyGuard {
 
         // Update withdrawal tracking
         campaign.fundsWithdrawn = true;
-        campaign.withdrawalTimestamp = block.timestamp;
 
         emit FundsWithdrawn(campaignId, msg.sender, organizerAmount);
     }
@@ -308,8 +301,12 @@ contract FundingManager is ReentrancyGuard {
      * @return targetAmount Funding goal amount
      * @return organizerDeposit Amount deposited by organizer
      * @return fundsWithdrawn Whether organizer has withdrawn funds
-     * @return withdrawalTimestamp When funds were withdrawn (0 if not withdrawn)
+
      * @return fundingToken Address of the funding token used
+     * @return protocolFeesCollected Protocol fees collected
+
+
+
      */
     function getCampaignStatus(
         uint256 campaignId
@@ -325,8 +322,8 @@ contract FundingManager is ReentrancyGuard {
             uint256 targetAmount,
             uint256 organizerDeposit,
             bool fundsWithdrawn,
-            uint256 withdrawalTimestamp,
-            address fundingToken
+            address fundingToken,
+            uint256 protocolFeesCollected
         )
     {
         EventCampaign storage campaign = campaigns[campaignId];
@@ -341,7 +338,6 @@ contract FundingManager is ReentrancyGuard {
         targetAmount = campaign.targetAmount;
         organizerDeposit = campaign.organizerDeposit;
         fundsWithdrawn = campaign.fundsWithdrawn;
-        withdrawalTimestamp = campaign.withdrawalTimestamp;
         fundingToken = campaign.fundingToken;
 
         return (
@@ -353,8 +349,8 @@ contract FundingManager is ReentrancyGuard {
             targetAmount,
             organizerDeposit,
             fundsWithdrawn,
-            withdrawalTimestamp,
-            fundingToken
+            fundingToken,
+            campaign.protocolFeesCollected
         );
     }
 
@@ -368,5 +364,46 @@ contract FundingManager is ReentrancyGuard {
     ) external view returns (address fundingToken) {
         EventCampaign storage campaign = campaigns[campaignId];
         return campaign.fundingToken;
+    }
+
+    /**
+     * @dev Verify campaign balance and accounting
+     * @param campaignId The ID of the campaign to verify
+     * @return isBalanced Whether the accounting is balanced
+     * @return expectedBalance Expected balance based on accounting
+     * @return actualBalance Actual balance in the contract
+     * @return discrepancy Description of any discrepancy found
+     */
+    function verifyCampaignBalance(
+        uint256 campaignId
+    )
+        external
+        view
+        returns (
+            bool isBalanced,
+            uint256 expectedBalance,
+            uint256 actualBalance,
+            string memory discrepancy
+        )
+    {
+        EventCampaign storage campaign = campaigns[campaignId];
+
+        // Calculate expected balance based on accounting
+        expectedBalance =
+            campaign.organizerDeposit +
+            campaign.raisedAmount -
+            campaign.protocolFeesCollected;
+
+        // Get actual balance in the contract
+        IERC20 campaignToken = IERC20(campaign.fundingToken);
+        actualBalance = campaignToken.balanceOf(address(this));
+
+        isBalanced = (expectedBalance == actualBalance);
+
+        if (!isBalanced) {
+            discrepancy = "Balance mismatch detected";
+        }
+
+        return (isBalanced, expectedBalance, actualBalance, discrepancy);
     }
 }
