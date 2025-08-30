@@ -57,16 +57,13 @@ contract FundingManager is ReentrancyGuard {
     event ContributionMade(
         uint256 indexed campaignId,
         address indexed contributor,
-        uint256 amount
+        uint256 amount,
+        uint256 tokensMinted
     );
 
     event CampaignFunded(uint256 indexed campaignId, uint256 totalRaised);
     event CampaignExpired(uint256 indexed campaignId, uint256 totalRaised);
-    event TokensMinted(
-        uint256 indexed campaignId,
-        uint256 contributorTokens,
-        uint256 poolTokens
-    );
+    event TokensMinted(uint256 indexed campaignId, uint256 poolTokens);
     event ProtocolFeePaid(uint256 indexed campaignId, uint256 amount);
     event OrganizerFundsSent(
         uint256 indexed campaignId,
@@ -183,7 +180,12 @@ contract FundingManager is ReentrancyGuard {
         campaign.raisedAmount += amount;
         userContributions[msg.sender][campaignId] += amount;
 
-        emit ContributionMade(campaignId, msg.sender, amount);
+        // Mint tokens immediately to contributor (1:1 ratio)
+        EventToken eventToken = EventToken(campaign.eventToken);
+        uint256 userTokens = amount; // 1:1 ratio with contribution
+        eventToken.mint(msg.sender, userTokens);
+
+        emit ContributionMade(campaignId, msg.sender, amount, userTokens);
 
         // Check if funding target is reached
         if (campaign.raisedAmount == campaign.targetAmount) {
@@ -200,18 +202,12 @@ contract FundingManager is ReentrancyGuard {
         campaign.isFunded = true;
         campaign.isActive = false;
 
-        // 1. Mint event tokens
+        // 1. Mint pool tokens (25% of target for initial liquidity)
         EventToken eventToken = EventToken(campaign.eventToken);
-
-        // Tokens for contributors (130% of target)
-        uint256 contributorTokens = (campaign.targetAmount * 130) / 100;
-        eventToken.mint(address(this), contributorTokens);
-
-        // Tokens for pool (25% extra of target)
         uint256 poolTokens = (campaign.targetAmount * 25) / 100;
         eventToken.mint(address(this), poolTokens);
 
-        emit TokensMinted(campaignId, contributorTokens, poolTokens);
+        emit TokensMinted(campaignId, poolTokens);
 
         // 2. Pay protocol fee (10% of target - from organizer deposit)
         uint256 protocolFee = campaign.organizerDeposit;
@@ -231,7 +227,7 @@ contract FundingManager is ReentrancyGuard {
         // 4. Prepare for pool (save in storage for future hook)
         poolPreparation[campaignId] = PoolPreparation({
             fundingTokens: (campaign.targetAmount * 30) / 100,
-            eventTokens: poolTokens
+            eventTokens: (campaign.targetAmount * 25) / 100
         });
 
         emit CampaignFunded(campaignId, campaign.raisedAmount);
