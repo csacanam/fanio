@@ -65,13 +65,13 @@ Fanio turns every event into a liquid digital asset.
 
 - **Net Target**: Defined by organizer (e.g., $100k)
 - **Protocol Fee**: 10% in USDC (from organizer's initial raise, only charged if target is reached)
-- **Initial Liquidity**: 30% mandatory extra → pool starts with 20% premium over pre-funding price
+- **Funding Cap**: Up to 30% over target allowed (e.g., $130k max for $100k target)
 - **Supply Structure**:
-  - Pre-funding: tokens equal to target (e.g., 100k tokens)
-  - Pool: tokens equal to USDC/1.2 (e.g., 30k/1.2 = 25k tokens)
-  - Total supply = pre-funding + pool (e.g., 125k tokens)
+  - Pre-funding: tokens equal to total raised (e.g., 130k tokens for $130k raised)
+  - Pool tokens: 25% of original target (e.g., 25k tokens for $100k target)
+  - Total supply = pre-funding + pool (e.g., 155k tokens total)
 
-**No Overhang**: No extra tokens floating in the market.
+**Fair Distribution**: Pool tokens are calculated from the original target, not the total raised.
 
 ---
 
@@ -114,15 +114,16 @@ Fanio turns every event into a liquid digital asset.
 ### Initial Setup:
 
 - Organizer receives: **100k USDC** net
-- Initial pool: **30k USDC + 25k tokens** (initial price 1.20 USDC)
-- Protocol receives: **10k USDC** (10%)
-- Total supply: **125k $EVENT**
+- Total raised: **130k USDC** (100k target + 30k extra)
+- Pool tokens: **25k tokens** (25% of 100k target)
+- Protocol receives: **10k USDC** (10% of 100k target)
+- Total supply: **155k $EVENT** (130k pre-funding + 25k pool)
 
 ### Fan Buys 100 USDC in Pool:
 
 - 3% fee → **3 USDC**
-- 1.2 USDC (40%) → locked as permanent liquidity
-- 1.8 USDC (60%) → Fanio
+- 3.88 USDC (40%) → locked as permanent liquidity
+- 5.82 USDC (60%) → Fanio
 
 ### Fan Sells 100 USDC Worth of $EVENT:
 
