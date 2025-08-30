@@ -13,6 +13,9 @@ contract FundingManager is ReentrancyGuard {
     // Default funding currency (USDC) - can be overridden per campaign
     IERC20 public immutable DEFAULT_FUNDING_TOKEN;
 
+    // Protocol wallet for collecting fees
+    address public immutable PROTOCOL_WALLET;
+
     // Campaign storage
     struct EventCampaign {
         address eventToken;
@@ -27,6 +30,14 @@ contract FundingManager is ReentrancyGuard {
         bool fundsWithdrawn; // Whether organizer has withdrawn funds
         uint256 withdrawalTimestamp; // When funds were withdrawn
     }
+
+    // Pool preparation storage
+    struct PoolPreparation {
+        uint256 fundingTokens;
+        uint256 eventTokens;
+    }
+
+    mapping(uint256 => PoolPreparation) public poolPreparation;
 
     mapping(uint256 => EventCampaign) public campaigns;
     mapping(address => mapping(uint256 => uint256)) public userContributions;
@@ -51,14 +62,26 @@ contract FundingManager is ReentrancyGuard {
 
     event CampaignFunded(uint256 indexed campaignId, uint256 totalRaised);
     event CampaignExpired(uint256 indexed campaignId, uint256 totalRaised);
+    event TokensMinted(
+        uint256 indexed campaignId,
+        uint256 contributorTokens,
+        uint256 poolTokens
+    );
+    event ProtocolFeePaid(uint256 indexed campaignId, uint256 amount);
+    event OrganizerFundsSent(
+        uint256 indexed campaignId,
+        address organizer,
+        uint256 amount
+    );
     event FundsWithdrawn(
         uint256 indexed campaignId,
         address indexed organizer,
         uint256 amount
     );
 
-    constructor(address defaultFundingToken) {
+    constructor(address defaultFundingToken, address protocolWallet) {
         DEFAULT_FUNDING_TOKEN = IERC20(defaultFundingToken);
+        PROTOCOL_WALLET = protocolWallet;
     }
 
     /**
@@ -94,8 +117,13 @@ contract FundingManager is ReentrancyGuard {
         // Calculate cap: 130% for contributors (1:1) + 25% extra for pool (1.2x price)
         uint256 cap = (targetAmount * 155) / 100;
 
-        // Deploy EventToken
-        EventToken eventToken = new EventToken(tokenName, tokenSymbol, cap);
+        // Deploy EventToken with FundingManager address
+        EventToken eventToken = new EventToken(
+            tokenName,
+            tokenSymbol,
+            cap,
+            address(this)
+        );
 
         // Create campaign
         campaigns[campaignId] = EventCampaign({
@@ -172,9 +200,43 @@ contract FundingManager is ReentrancyGuard {
         campaign.isFunded = true;
         campaign.isActive = false;
 
+        // 1. Mintear tokens del evento
+        EventToken eventToken = EventToken(campaign.eventToken);
+
+        // Tokens para contribuyentes (130% del target)
+        uint256 contributorTokens = (campaign.targetAmount * 130) / 100;
+        eventToken.mint(address(this), contributorTokens);
+
+        // Tokens para el pool (25% extra del target)
+        uint256 poolTokens = (campaign.targetAmount * 25) / 100;
+        eventToken.mint(address(this), poolTokens);
+
+        emit TokensMinted(campaignId, contributorTokens, poolTokens);
+
+        // 2. Pagar fee del protocolo (10% del target - del depósito del organizador)
+        uint256 protocolFee = campaign.organizerDeposit;
+        IERC20 campaignToken = IERC20(campaign.fundingToken);
+
+        campaignToken.transfer(PROTOCOL_WALLET, protocolFee);
+        emit ProtocolFeePaid(campaignId, protocolFee);
+
+        // 3. Enviar fondos al organizador (100% del target)
+        campaignToken.transfer(campaign.organizer, campaign.targetAmount);
+        emit OrganizerFundsSent(
+            campaignId,
+            campaign.organizer,
+            campaign.targetAmount
+        );
+
+        // 4. Preparar para el pool (guardar en storage para hook futuro)
+        poolPreparation[campaignId] = PoolPreparation({
+            fundingTokens: (campaign.targetAmount * 30) / 100,
+            eventTokens: poolTokens
+        });
+
         emit CampaignFunded(campaignId, campaign.raisedAmount);
 
-        // TODO: Create Uniswap V4 pool with automatic liquidity
+        // TODO: Crear Uniswap V4 pool con liquidez automática
     }
 
     /**
