@@ -158,7 +158,7 @@ export default function FanioLanding() {
                 <img
                   src={eventData.image || "/placeholder.svg"}
                   alt={eventData.title}
-                  className="w-full h-48 object-cover rounded-t-lg"
+                  className="w-full h-48 object-cover"
                 />
                   <Badge className="absolute top-3 right-3 fanio-gradient text-white border-0">
                     {loading ? "Loading..." : `${eventData.daysLeft} days left`}
@@ -176,7 +176,7 @@ export default function FanioLanding() {
                   <div className="flex justify-between text-sm">
                       <span>${eventData.current.toLocaleString('en-US')} raised</span>
                     <span>{eventData.progress}%</span>
-                    </div>
+                  </div>
                     <Progress value={eventData.progress} className="h-2 progress-bar-glow" />
                     <p className="text-xs text-muted-foreground">Goal: ${eventData.target.toLocaleString('en-US')} USDC</p>
                 </div>
@@ -185,7 +185,7 @@ export default function FanioLanding() {
                     <span>{eventData.backers.toLocaleString('en-US')} backers</span>
                   <span className="flex items-center gap-1">
                     <Ticket className="h-4 w-4" />
-                    $TSBOG tokens
+                    ${campaignData?.tokenSymbol || 'TSBOG'} tokens
                   </span>
                 </div>
 
@@ -200,7 +200,7 @@ export default function FanioLanding() {
                 <img
                   src="/bad-bunny-concert-reggaeton.png"
                   alt="Coming Soon"
-                  className="w-full h-48 object-cover rounded-t-lg"
+                  className="w-full h-48 object-cover"
                 />
                 <Badge variant="secondary" className="absolute top-3 right-3">
                   Coming Soon
@@ -218,7 +218,7 @@ export default function FanioLanding() {
                 <img
                   src="/drake-concert-hip-hop-stage.png"
                   alt="Coming Soon"
-                  className="w-full h-48 object-cover rounded-t-lg"
+                  className="w-full h-48 object-cover"
                 />
                 <Badge variant="secondary" className="absolute top-3 right-3">
                   Coming Soon

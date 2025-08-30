@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useCampaign } from "@/hooks/useCampaign"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -38,42 +39,32 @@ interface EventPageProps {
 }
 
 export default function EventPage({ params }: EventPageProps) {
+  // Use real contract data for campaign ID 0
+  const { campaignData, loading, error } = useCampaign(0);
+  
   const [investmentAmount, setInvestmentAmount] = useState("")
-  const [currentProgress, setCurrentProgress] = useState(67500)
   const [isSimulating, setIsSimulating] = useState(false)
   const [showMarketplace, setShowMarketplace] = useState(false)
 
-  const targetAmount = 100000
-  const progressPercentage = (currentProgress / targetAmount) * 100
+  // Use real data if available, fallback to mock data
+  const currentProgress = campaignData ? parseFloat(campaignData.raisedAmount) : 67.5 // Values are already in USDC
+  const targetAmount = campaignData ? parseFloat(campaignData.targetAmount) : 100 // Values are already in USDC
+  const progressPercentage = campaignData ? campaignData.progress : (currentProgress / targetAmount) * 100
 
-  // Simulate investment progress
+  // Simulate investment progress (for demo purposes)
   const simulateInvestment = () => {
     if (!investmentAmount || isSimulating) return
 
     setIsSimulating(true)
     const amount = Number.parseFloat(investmentAmount)
-    const newProgress = Math.min(currentProgress + amount, targetAmount)
-
-    // Animate progress bar
-    const increment = (newProgress - currentProgress) / 20
-    let current = currentProgress
-
-    const interval = setInterval(() => {
-      current += increment
-      setCurrentProgress(Math.min(current, newProgress))
-
-      if (current >= newProgress) {
-        clearInterval(interval)
-        setIsSimulating(false)
-
-        // If target reached, show marketplace
-        if (newProgress >= targetAmount) {
-          setTimeout(() => setShowMarketplace(true), 1000)
-        }
-      }
-    }, 50)
-
-    setInvestmentAmount("")
+    
+    // For demo, we'll simulate the progress
+    // In real app, this would be an actual blockchain transaction
+    setTimeout(() => {
+      setIsSimulating(false)
+      alert(`Demo: Would contribute ${amount} USDC to the campaign`)
+      setInvestmentAmount("")
+    }, 1000)
   }
 
   const scrollToPromoter = () => {
@@ -87,10 +78,10 @@ export default function EventPage({ params }: EventPageProps) {
     }
   }
 
-  // Mock event data - in real app, this would come from API/database
+  // Event data - use real contract data when available
   const demoEvent = {
     id: "taylor-swift-colombia-2025",
-    title: "Taylor Swift | The Eras Tour",
+    title: campaignData?.tokenName || "Taylor Swift | The Eras Tour",
     artist: "Taylor Swift",
     promoter: "Páramo Presenta",
     promoterDescription: "Top event organizer in Colombia with over 50 successful concerts including major international pop and rock artists.",
@@ -101,8 +92,8 @@ export default function EventPage({ params }: EventPageProps) {
       "We want to bring Taylor Swift to Colombia for the first time ever! With her massive global popularity and Colombia's passionate music culture, we believe there's huge demand for this pop experience in South America. Help us make history happen!",
     target: targetAmount,
     current: currentProgress,
-    backers: 1247,
-    daysLeft: 23,
+    backers: campaignData ? campaignData.uniqueBackers : 1247,
+    daysLeft: campaignData ? campaignData.daysLeft : 23,
     image: "/taylor-swift-concert-stage.png",
   }
 
@@ -160,6 +151,20 @@ export default function EventPage({ params }: EventPageProps) {
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent rounded-lg" />
               <div className="absolute bottom-4 left-4 text-white">
                 <h1 className="text-3xl font-bold text-balance">{demoEvent.title}</h1>
+                
+                {/* Contract Data Status */}
+                {error && (
+                  <div className="flex items-center gap-2 text-yellow-300 text-sm mb-2">
+                    <span>⚠️ Connect to Base Sepolia to see live data</span>
+                  </div>
+                )}
+                
+                {loading && (
+                  <div className="flex items-center gap-2 text-blue-300 text-sm mb-2">
+                    <span>🔄 Loading live data...</span>
+                  </div>
+                )}
+                
                 <div className="flex items-center gap-2">
                   <span className="text-lg opacity-90">Presented by</span>
                   <button 
@@ -180,7 +185,7 @@ export default function EventPage({ params }: EventPageProps) {
                   <Gift className="h-5 w-5" />
                   Token Perks & Utilities
                 </CardTitle>
-                <CardDescription>What you can do with your $TSBOG tokens</CardDescription>
+                <CardDescription>What you can do with your ${campaignData?.tokenSymbol || 'TSBOG'} tokens</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-2 gap-4">
@@ -248,7 +253,7 @@ export default function EventPage({ params }: EventPageProps) {
                         {isSimulating ? "Processing..." : "Fund This Event"}
                       </Button>
                       <p className="text-xs text-muted-foreground text-center">
-                        You'll receive $TSBOG tokens equal to your USDC investment
+                        You'll receive ${campaignData?.tokenSymbol || 'TSBOG'} tokens equal to your USDC investment
                       </p>
                     </div>
                   ) : (
@@ -257,15 +262,15 @@ export default function EventPage({ params }: EventPageProps) {
                         <TrendingUp className="h-8 w-8 text-primary mx-auto mb-2" />
                         <h3 className="font-semibold text-primary">Funding Complete!</h3>
                         <p className="text-sm text-muted-foreground mt-1">
-                          $TSBOG tokens are now trading on the open market
+                          ${campaignData?.tokenSymbol || 'TSBOG'} tokens are now trading on the open market
                         </p>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <Button variant="outline" size="sm">
-                          Buy $TSBOG
+                          Buy ${campaignData?.tokenSymbol || 'TSBOG'}
                         </Button>
                         <Button variant="outline" size="sm">
-                          Sell $TSBOG
+                          Sell ${campaignData?.tokenSymbol || 'TSBOG'}
                         </Button>
                       </div>
                       <div className="text-center text-sm text-muted-foreground">

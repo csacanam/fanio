@@ -14,6 +14,12 @@ const USDC_ABI = [
   "function decimals() external view returns (uint8)"
 ];
 
+// ABI for EventToken contract (simplified for what we need)
+const EVENT_TOKEN_ABI = [
+  "function name() external view returns (string)",
+  "function symbol() external view returns (string)"
+];
+
 export interface CampaignData {
   isActive: boolean;
   isExpired: boolean;
@@ -26,6 +32,8 @@ export interface CampaignData {
   protocolFeesCollected: string;
   eventToken: string;
   uniqueBackers: number;
+  tokenName: string;
+  tokenSymbol: string;
   progress: number;
   daysLeft: number;
   hoursLeft: number;
@@ -66,6 +74,25 @@ export const useCampaign = (campaignId: number = 0) => {
       // Get event token
       const eventToken = await fundingManager.getCampaignEventToken(campaignId);
       
+      // Get EventToken name and symbol
+      let tokenName = "Event Token";
+      let tokenSymbol = "EVT";
+      
+      if (eventToken !== ethers.ZeroAddress) {
+        try {
+          const eventTokenContract = new ethers.Contract(
+            eventToken,
+            EVENT_TOKEN_ABI,
+            provider
+          );
+          
+          tokenName = await eventTokenContract.name();
+          tokenSymbol = await eventTokenContract.symbol();
+        } catch (err) {
+          console.warn('Could not fetch EventToken name/symbol, using defaults');
+        }
+      }
+      
       // Get USDC decimals
       const usdcDecimals = await usdc.decimals();
 
@@ -97,6 +124,8 @@ export const useCampaign = (campaignId: number = 0) => {
         protocolFeesCollected,
         eventToken,
         uniqueBackers: Number(status.uniqueBackers),
+        tokenName,
+        tokenSymbol,
         progress,
         daysLeft,
         hoursLeft
