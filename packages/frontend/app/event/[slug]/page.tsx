@@ -27,6 +27,7 @@ import {
   Ticket,
   Zap,
   Info,
+  Shield,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -73,6 +74,17 @@ export default function EventPage({ params }: EventPageProps) {
     }, 50)
 
     setInvestmentAmount("")
+  }
+
+  const scrollToPromoter = () => {
+    // Try desktop version first, then mobile
+    let promoterSection = document.getElementById('about-promoter')
+    if (!promoterSection) {
+      promoterSection = document.getElementById('about-promoter-mobile')
+    }
+    if (promoterSection) {
+      promoterSection.scrollIntoView({ behavior: "smooth" })
+    }
   }
 
   // Mock event data - in real app, this would come from API/database
@@ -150,46 +162,13 @@ export default function EventPage({ params }: EventPageProps) {
                 <h1 className="text-3xl font-bold text-balance">{demoEvent.title}</h1>
                 <div className="flex items-center gap-2">
                   <span className="text-lg opacity-90">Presented by</span>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <button className="text-lg font-medium underline hover:text-primary transition-colors flex items-center gap-1">
-                        {demoEvent.promoter}
-                        <Info className="h-4 w-4" />
-                      </button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-md">
-                      <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                          <Users className="h-5 w-5 text-primary" />
-                          {demoEvent.promoter}
-                        </DialogTitle>
-                        <DialogDescription className="text-left">
-                          Event Promoter
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <p className="text-sm text-muted-foreground leading-relaxed">
-                          {demoEvent.promoterDescription}
-                        </p>
-                        <div className="flex items-center gap-4 text-sm">
-                          <div className="flex items-center gap-1">
-                            <Trophy className="h-4 w-4 text-primary" />
-                            <span className="font-medium">50+</span>
-                            <span className="text-muted-foreground">Events</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <MapPin className="h-4 w-4 text-primary" />
-                            <span className="text-muted-foreground">Colombia</span>
-                          </div>
-                        </div>
-                        <div className="pt-2 border-t">
-                          <p className="text-xs text-muted-foreground">
-                            Verified event promoter with proven track record
-                          </p>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                  <button 
+                    onClick={scrollToPromoter}
+                    className="text-lg font-medium underline hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
+                  >
+                    {demoEvent.promoter}
+                    <Info className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
             </div>
@@ -267,7 +246,6 @@ export default function EventPage({ params }: EventPageProps) {
                         size="lg"
                       >
                         {isSimulating ? "Processing..." : "Fund This Event"}
-                        <DollarSign className="ml-2 h-4 w-4" />
                       </Button>
                       <p className="text-xs text-muted-foreground text-center">
                         You'll receive $TSBOG tokens equal to your USDC investment
@@ -401,6 +379,58 @@ export default function EventPage({ params }: EventPageProps) {
               </Card>
             </div>
 
+            {/* Mobile: About The Promoter - appears seventh */}
+            <div className="lg:hidden">
+              <Card id="about-promoter-mobile">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    About The Promoter
+                  </CardTitle>
+                </CardHeader>
+                                              <CardContent>
+                  <div className="space-y-4">
+                    <div className="mt-6">
+                      <p className="text-base font-semibold">{demoEvent.promoter}</p>
+                    </div>
+                    
+                    <p className="text-muted-foreground leading-relaxed">
+                      {demoEvent.promoterDescription}
+                    </p>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Trophy className="h-4 w-4 text-primary" />
+                        <span className="font-medium">Events Organized:</span>
+                        <span className="text-muted-foreground">Festival Estéreo Picnic, Baum Festival, Festival Cordillera and more</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Clock className="h-4 w-4 text-primary" />
+                        <span className="font-medium">Experience:</span>
+                        <span className="text-muted-foreground">+8 years</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <MapPin className="h-4 w-4 text-primary" />
+                        <span className="font-medium">Based in:</span>
+                        <span className="text-muted-foreground">Bogotá, Colombia</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Trophy className="h-4 w-4 text-primary" />
+                        <span className="font-medium">Specialties:</span>
+                        <span className="text-muted-foreground">International Pop & Rock</span>
+                      </div>
+                    </div>
+                    
+                    <div className="pt-3 border-t">
+                      <p className="text-xs text-muted-foreground text-center">
+                        This promoter has been verified by Fanio and has a proven track record of successful events
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
 
 
             {/* Desktop: About Event */}
@@ -413,6 +443,56 @@ export default function EventPage({ params }: EventPageProps) {
                   {demoEvent.description} By funding this proposal, you'll receive $TSBOG tokens that give you exclusive
                   perks and the ability to trade on the open market once funding is complete.
                 </p>
+              </CardContent>
+            </Card>
+
+            {/* Desktop: About The Promoter */}
+            <Card className="hidden lg:block" id="about-promoter">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  About The Promoter
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="mt-6">
+                    <p className="text-lg font-semibold">{demoEvent.promoter}</p>
+                  </div>
+                  
+                  <p className="text-muted-foreground leading-relaxed">
+                    {demoEvent.promoterDescription}
+                  </p>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Trophy className="h-4 w-4 text-primary" />
+                      <span className="font-medium">Events Organized:</span>
+                      <span className="text-muted-foreground">Festival Estéreo Picnic, Baum Festival, Festival Cordillera and more</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Clock className="h-4 w-4 text-primary" />
+                      <span className="font-medium">Experience:</span>
+                      <span className="text-muted-foreground">+8 years</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <MapPin className="h-4 w-4 text-primary" />
+                      <span className="font-medium">Based in:</span>
+                      <span className="text-muted-foreground">Bogotá, Colombia</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Trophy className="h-4 w-4 text-primary" />
+                      <span className="font-medium">Specialties:</span>
+                      <span className="text-muted-foreground">International Pop & Rock</span>
+                    </div>
+                  </div>
+                  
+                  <div className="pt-3 border-t">
+                    <p className="text-xs text-muted-foreground text-center">
+                      This promoter has been verified by Fanio and has a proven track record of successful events
+                    </p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
@@ -463,7 +543,6 @@ export default function EventPage({ params }: EventPageProps) {
                       size="lg"
                     >
                       {isSimulating ? "Processing..." : "Fund This Event"}
-                      <DollarSign className="ml-2 h-4 w-4" />
                     </Button>
                                           <p className="text-xs text-muted-foreground text-center">
                         You'll receive $TSBOG tokens equal to your USDC investment
