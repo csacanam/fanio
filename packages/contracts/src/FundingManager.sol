@@ -24,6 +24,8 @@ contract FundingManager is ReentrancyGuard {
         uint256 deadline;
         bool isActive;
         bool isFunded;
+        bool fundsWithdrawn; // Whether organizer has withdrawn funds
+        uint256 withdrawalTimestamp; // When funds were withdrawn
     }
 
     mapping(uint256 => EventCampaign) public campaigns;
@@ -105,7 +107,9 @@ contract FundingManager is ReentrancyGuard {
             organizerDeposit: requiredDeposit,
             deadline: deadline,
             isActive: true,
-            isFunded: false
+            isFunded: false,
+            fundsWithdrawn: false,
+            withdrawalTimestamp: 0
         });
 
         emit CampaignCreated(
@@ -154,7 +158,7 @@ contract FundingManager is ReentrancyGuard {
         emit ContributionMade(campaignId, msg.sender, amount);
 
         // Check if funding target is reached
-        if (campaign.raisedAmount >= campaign.targetAmount) {
+        if (campaign.raisedAmount == campaign.targetAmount) {
             _finalizeFunding(campaignId);
         }
     }
@@ -180,6 +184,7 @@ contract FundingManager is ReentrancyGuard {
         EventCampaign storage campaign = campaigns[campaignId];
         require(campaign.organizer == msg.sender, "Not the organizer");
         require(campaign.isFunded, "Campaign not funded");
+        require(!campaign.fundsWithdrawn, "Funds already withdrawn");
 
         // Organizer receives the full target amount
         uint256 organizerAmount = campaign.targetAmount;
@@ -190,6 +195,10 @@ contract FundingManager is ReentrancyGuard {
             campaignToken.transfer(msg.sender, organizerAmount),
             "Transfer failed"
         );
+
+        // Update withdrawal tracking
+        campaign.fundsWithdrawn = true;
+        campaign.withdrawalTimestamp = block.timestamp;
 
         emit FundsWithdrawn(campaignId, msg.sender, organizerAmount);
     }
