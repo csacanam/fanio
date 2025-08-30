@@ -5,10 +5,13 @@ import {Script} from "forge-std/Script.sol";
 import {FundingManager} from "../src/FundingManager.sol";
 import {Config} from "./Config.s.sol";
 import {MockUSDC} from "../src/mocks/MockUSDC.sol";
+import {console} from "forge-std/console.sol";
 
 contract DeployFundingManager is Script {
     function run() external {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        uint256 deployerPrivateKey = vm.parseUint(
+            string.concat("0x", vm.envString("PRIVATE_KEY"))
+        );
         address deployer = vm.addr(deployerPrivateKey);
 
         // Get configuration based on network
@@ -26,28 +29,36 @@ contract DeployFundingManager is Script {
             fundingToken = address(mockUSDC);
             protocolWallet = deployer; // Use deployer as protocol wallet for local testing
 
-            new FundingManager(fundingToken, protocolWallet);
+            FundingManager fundingManager = new FundingManager(
+                fundingToken,
+                protocolWallet
+            );
 
             vm.stopBroadcast();
 
-            // Local deployment addresses will be shown in transaction trace
-            // MockUSDC: address(mockUSDC)
-            // FundingManager: address(fundingManager)
-            // Protocol Wallet: deployer
+            // Print deployment addresses (Foundry standard)
+            console.log("=== Local Deployment Complete ===");
+            console.log("MockUSDC deployed at:", address(mockUSDC));
+            console.log("FundingManager deployed at:", address(fundingManager));
+            console.log("Protocol Wallet:", protocolWallet);
         } else {
             // Network deployment: use Config.s.sol values
             (fundingToken, protocolWallet) = config.getBaseSepoliaConfig();
 
             vm.startBroadcast(deployerPrivateKey);
 
-            new FundingManager(fundingToken, protocolWallet);
+            FundingManager fundingManager = new FundingManager(
+                fundingToken,
+                protocolWallet
+            );
 
             vm.stopBroadcast();
 
-            // Network deployment addresses will be shown in transaction trace
-            // FundingManager: address(fundingManager)
-            // Funding Token: fundingToken
-            // Protocol Wallet: protocolWallet
+            // Print deployment addresses (Foundry standard)
+            console.log("=== Network Deployment Complete ===");
+            console.log("FundingManager deployed at:", address(fundingManager));
+            console.log("Funding Token:", fundingToken);
+            console.log("Protocol Wallet:", protocolWallet);
         }
     }
 }

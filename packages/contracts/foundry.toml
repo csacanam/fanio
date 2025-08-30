@@ -11,4 +11,8 @@ optimizer_runs = 800
 via_ir = false
 ffi = true
 
+[rpc_endpoints]
+anvil = "http://localhost:8545"
+base_sepolia = "${BASE_SEPOLIA_RPC}"
+
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

@@ -12,8 +12,8 @@ contract Config is Script {
         pure
         returns (address fundingToken, address protocolWallet)
     {
-        fundingToken = address(0x036CBD53842c5426634e7929541ec2318F3DCF7C); // USDC on Base Sepolia
-        protocolWallet = address(0x1234567890123456789012345678901234567890); // Update with your wallet
+        fundingToken = address(0x7de9a0c146Cc6A92F2592C5E4e2331B263De88B1); // USDC on Base Sepolia
+        protocolWallet = address(0x3F696921Df10037961aF3b757689FC383709b75d); // Update with your wallet
     }
 
     // Local/Anvil
@@ -23,6 +23,6 @@ contract Config is Script {
         returns (address fundingToken, address protocolWallet)
     {
         fundingToken = address(0); // Will be deployed separately for local testing
-        protocolWallet = address(0x1234567890123456789012345678901234567890); // Update with your wallet
+        protocolWallet = address(0x3F696921Df10037961aF3b757689FC383709b75d); // Update with your wallet
     }
 }
