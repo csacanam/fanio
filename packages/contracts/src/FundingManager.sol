@@ -248,6 +248,10 @@ contract FundingManager is ReentrancyGuard {
      * @return timeLeft Time remaining until deadline (0 if expired)
      * @return raisedAmount Total amount raised so far
      * @return targetAmount Funding goal amount
+     * @return organizerDeposit Amount deposited by organizer
+     * @return fundsWithdrawn Whether organizer has withdrawn funds
+     * @return withdrawalTimestamp When funds were withdrawn (0 if not withdrawn)
+     * @return fundingToken Address of the funding token used
      */
     function getCampaignStatus(
         uint256 campaignId
@@ -260,7 +264,11 @@ contract FundingManager is ReentrancyGuard {
             bool isFunded,
             uint256 timeLeft,
             uint256 raisedAmount,
-            uint256 targetAmount
+            uint256 targetAmount,
+            uint256 organizerDeposit,
+            bool fundsWithdrawn,
+            uint256 withdrawalTimestamp,
+            address fundingToken
         )
     {
         EventCampaign storage campaign = campaigns[campaignId];
@@ -273,6 +281,10 @@ contract FundingManager is ReentrancyGuard {
             : campaign.deadline - block.timestamp;
         raisedAmount = campaign.raisedAmount;
         targetAmount = campaign.targetAmount;
+        organizerDeposit = campaign.organizerDeposit;
+        fundsWithdrawn = campaign.fundsWithdrawn;
+        withdrawalTimestamp = campaign.withdrawalTimestamp;
+        fundingToken = campaign.fundingToken;
 
         return (
             isActive,
@@ -280,7 +292,11 @@ contract FundingManager is ReentrancyGuard {
             isFunded,
             timeLeft,
             raisedAmount,
-            targetAmount
+            targetAmount,
+            organizerDeposit,
+            fundsWithdrawn,
+            withdrawalTimestamp,
+            fundingToken
         );
     }
 
