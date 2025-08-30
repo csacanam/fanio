@@ -20,6 +20,7 @@ contract FundingManager is ReentrancyGuard {
         address fundingToken; // Custom funding token for this campaign
         uint256 targetAmount;
         uint256 raisedAmount;
+        uint256 organizerDeposit; // Amount deposited by organizer
         uint256 deadline;
         bool isActive;
         bool isFunded;
@@ -36,6 +37,7 @@ contract FundingManager is ReentrancyGuard {
         address eventToken,
         address fundingToken,
         uint256 targetAmount,
+        uint256 organizerDeposit,
         uint256 deadline
     );
 
@@ -100,6 +102,7 @@ contract FundingManager is ReentrancyGuard {
             fundingToken: address(tokenToUse),
             targetAmount: targetAmount,
             raisedAmount: 0,
+            organizerDeposit: requiredDeposit,
             deadline: deadline,
             isActive: true,
             isFunded: false
@@ -111,6 +114,7 @@ contract FundingManager is ReentrancyGuard {
             address(eventToken),
             address(tokenToUse),
             targetAmount,
+            requiredDeposit,
             deadline
         );
     }
