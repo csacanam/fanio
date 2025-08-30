@@ -32,20 +32,20 @@ export default function FanioLanding() {
   }
 
   const demoEvent = {
-    id: "bad-bunny-2025",
-    title: "Bad Bunny World Tour 2025",
-    artist: "Bad Bunny",
-    venue: "Madison Square Garden",
-    date: "2025-12-15",
-    location: "New York, NY",
+    id: "taylor-swift-colombia-2025",
+    title: "Taylor Swift | The Eras Tour",
+    artist: "Taylor Swift",
+    venue: "Estadio El Campín",
+    date: "2025-11-15",
+    location: "Bogotá, Colombia",
     description:
-      "Experience the most anticipated reggaeton concert of the year with Bad Bunny at the iconic Madison Square Garden.",
+      "Experience the most anticipated pop concert in Colombia! Taylor Swift's first-ever performance in South America's most passionate music country.",
     target: 100000,
     current: 67500,
     backers: 1247,
     daysLeft: 23,
-    image: "/bad-bunny-concert-reggaeton.png",
-    slug: "bad-bunny-new-york-2025",
+    image: "/taylor-swift-concert-stage.png",
+    slug: "taylor-swift-bogota-colombia-2025",
   }
 
   return (
@@ -166,7 +166,7 @@ export default function FanioLanding() {
                     <span>{demoEvent.backers.toLocaleString('en-US')} backers</span>
                   <span className="flex items-center gap-1">
                     <Ticket className="h-4 w-4" />
-                    $BBNY25 tokens
+                    $TSWIFT25 tokens
                   </span>
                 </div>
               </CardContent>
@@ -177,7 +177,7 @@ export default function FanioLanding() {
             <Card className="opacity-50">
               <div className="relative">
                 <img
-                  src="/taylor-swift-concert-stage.png"
+                  src="/bad-bunny-concert-reggaeton.png"
                   alt="Coming Soon"
                   className="w-full h-48 object-cover rounded-t-lg"
                 />
@@ -186,8 +186,8 @@ export default function FanioLanding() {
                 </Badge>
               </div>
               <CardContent className="p-4">
-                <h3 className="font-bold text-lg mb-1">Taylor Swift Eras Tour</h3>
-                <p className="text-muted-foreground text-sm mb-3">MetLife Stadium • East Rutherford, NJ</p>
+                <h3 className="font-bold text-lg mb-1">Bad Bunny World Tour</h3>
+                <p className="text-muted-foreground text-sm mb-3">Estadio Pascual Guerrero • Cali, Colombia</p>
                 <p className="text-sm text-muted-foreground">Funding opens soon...</p>
               </CardContent>
             </Card>
@@ -205,7 +205,7 @@ export default function FanioLanding() {
               </div>
               <CardContent className="p-4">
                 <h3 className="font-bold text-lg mb-1">Drake World Tour</h3>
-                <p className="text-muted-foreground text-sm mb-3">Crypto.com Arena • Los Angeles, CA</p>
+                <p className="text-muted-foreground text-sm mb-3">Estadio Atanasio Girardot • Medellín, Colombia</p>
                 <p className="text-sm text-muted-foreground">Funding opens soon...</p>
               </CardContent>
             </Card>

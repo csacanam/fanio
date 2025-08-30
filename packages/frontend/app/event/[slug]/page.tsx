@@ -77,21 +77,21 @@ export default function EventPage({ params }: EventPageProps) {
 
   // Mock event data - in real app, this would come from API/database
   const demoEvent = {
-    id: "bad-bunny-2025",
-    title: "Bad Bunny World Tour 2025",
-    artist: "Bad Bunny",
+    id: "taylor-swift-colombia-2025",
+    title: "Taylor Swift | The Eras Tour",
+    artist: "Taylor Swift",
     promoter: "Páramo Presenta",
-    promoterDescription: "Top event organizer in Colombia with over 50 successful concerts including major reggaeton and pop artists.",
-    venue: "Madison Square Garden",
-    date: "2025-12-15",
-    location: "New York, NY",
+    promoterDescription: "Top event organizer in Colombia with over 50 successful concerts including major international pop and rock artists.",
+    venue: "Estadio El Campín",
+    date: "2025-11-15",
+    location: "Bogotá, Colombia",
     description:
-      "We want to bring Bad Bunny to Madison Square Garden! With his massive popularity and sold-out shows worldwide, we believe there's huge demand for this reggaeton experience in New York. Help us make it happen!",
+      "We want to bring Taylor Swift to Colombia for the first time ever! With her massive global popularity and Colombia's passionate music culture, we believe there's huge demand for this pop experience in South America. Help us make history happen!",
     target: targetAmount,
     current: currentProgress,
     backers: 1247,
     daysLeft: 23,
-    image: "/bad-bunny-concert-reggaeton.png",
+    image: "/taylor-swift-concert-stage.png",
   }
 
   const perks = [
