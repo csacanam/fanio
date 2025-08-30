@@ -17,7 +17,7 @@ contract FundingManager is ReentrancyGuard {
     struct EventCampaign {
         address eventToken;
         address organizer;
-        address fundingToken;  // Custom funding token for this campaign
+        address fundingToken; // Custom funding token for this campaign
         uint256 targetAmount;
         uint256 raisedAmount;
         uint256 deadline;
@@ -65,7 +65,7 @@ contract FundingManager is ReentrancyGuard {
         string memory tokenSymbol,
         uint256 targetAmount,
         uint256 durationDays,
-        address fundingToken  // Custom funding token (use address(0) for default)
+        address fundingToken // Custom funding token (use address(0) for default)
     ) external returns (uint256 campaignId) {
         require(targetAmount > 0, "Target amount must be positive");
         require(durationDays > 0, "Duration must be positive");
@@ -74,23 +74,21 @@ contract FundingManager is ReentrancyGuard {
         uint256 requiredDeposit = targetAmount / 10; // 10%
 
         // Use custom funding token or default
-        IERC20 tokenToUse = fundingToken == address(0) ? DEFAULT_FUNDING_TOKEN : IERC20(fundingToken);
+        IERC20 tokenToUse = fundingToken == address(0)
+            ? DEFAULT_FUNDING_TOKEN
+            : IERC20(fundingToken);
 
         // Transfer tokens from organizer to contract
         require(
-            tokenToUse.transferFrom(
-                msg.sender,
-                address(this),
-                requiredDeposit
-            ),
+            tokenToUse.transferFrom(msg.sender, address(this), requiredDeposit),
             "Deposit transfer failed"
         );
 
         campaignId = nextCampaignId++;
         uint256 deadline = block.timestamp + (durationDays * 1 days);
 
-        // Calculate cap (1.3x target for contributors + liquidity)
-        uint256 cap = (targetAmount * 130) / 100;
+        // Calculate cap: 130% for contributors (1:1) + 25% extra for pool (1.2x price)
+        uint256 cap = (targetAmount * 155) / 100;
 
         // Deploy EventToken
         EventToken eventToken = new EventToken(tokenName, tokenSymbol, cap);
@@ -273,7 +271,9 @@ contract FundingManager is ReentrancyGuard {
      * @param campaignId The ID of the campaign to query
      * @return fundingToken The address of the funding token used by this campaign
      */
-    function getCampaignFundingToken(uint256 campaignId) external view returns (address fundingToken) {
+    function getCampaignFundingToken(
+        uint256 campaignId
+    ) external view returns (address fundingToken) {
         EventCampaign storage campaign = campaigns[campaignId];
         return campaign.fundingToken;
     }
