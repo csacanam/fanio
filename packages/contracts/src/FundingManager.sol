@@ -431,41 +431,45 @@ contract FundingManager is ReentrancyGuard {
     /**
      * @dev Close an expired campaign that didn't reach its funding goal
      *
-     * This function allows anyone to close a campaign that has expired without
-     * reaching its funding target. It marks the campaign as inactive and
-     * prepares it for potential refund processing.
+     * This is the PRIMARY function for handling campaign expiration. It can be called
+     * by anyone to close a campaign that has passed its deadline without reaching
+     * the funding target. This ensures campaigns don't remain in an inconsistent
+     * state indefinitely.
      *
      * Flow:
-     * 1. Validates campaign is currently active
-     * 2. Ensures campaign has passed its deadline
-     * 3. Confirms campaign hasn't been funded
-     * 4. Marks campaign as inactive
-     * 5. Emits expiration event
+     * 1. Validates campaign has passed its deadline
+     * 2. Confirms campaign hasn't been funded
+     * 3. Marks campaign as inactive (if not already inactive)
+     * 4. Emits expiration event
      *
      * @param campaignId ID of the expired campaign to close
      *
      * @notice Anyone can call this function to close expired campaigns
-     * @notice Campaign must be active and past its deadline
+     * @notice Campaign must be past its deadline
      * @notice Campaign must not have been successfully funded
-     * @notice This function only marks the campaign as inactive
+     * @notice This function handles both active and already-inactive campaigns
      * @notice Refund logic for contributors is planned for future implementation
      *
      * @custom:security Anyone can call this function (public utility)
      * @custom:security Only affects expired, unfunded campaigns
      * @custom:security No funds are transferred in this function
+     * @custom:security Idempotent - safe to call multiple times
      */
     function closeExpiredCampaign(uint256 campaignId) external {
         EventCampaign storage campaign = campaigns[campaignId];
-        require(campaign.isActive, "Campaign not active");
+
+        // Verify campaign is expired and not funded
         require(
             block.timestamp >= campaign.deadline,
             "Campaign not expired yet"
         );
         require(!campaign.isFunded, "Campaign already funded");
 
-        campaign.isActive = false;
-
-        emit CampaignExpired(campaignId, campaign.raisedAmount);
+        // Only mark as inactive if not already inactive
+        if (campaign.isActive) {
+            campaign.isActive = false;
+            emit CampaignExpired(campaignId, campaign.raisedAmount);
+        }
 
         // TODO: Implement refund logic for contributors
     }
@@ -474,15 +478,14 @@ contract FundingManager is ReentrancyGuard {
      * @dev Internal function to check and update campaign status based on current time
      *
      * This function automatically handles campaign expiration by checking if the
-     * current timestamp has passed the campaign deadline. If so, it marks the
-     * campaign as inactive and emits an expiration event.
+     * current timestamp has passed the campaign deadline. If so, it calls the
+     * centralized expiration logic to mark the campaign as inactive.
      *
      * Flow:
      * 1. Checks if current time >= campaign deadline
      * 2. Verifies campaign is still active
      * 3. Confirms campaign hasn't been funded
-     * 4. Marks campaign as inactive if expired
-     * 5. Emits expiration event with total raised amount
+     * 4. Calls closeExpiredCampaign function if expired
      *
      * @param campaignId ID of the campaign to check
      *
@@ -490,10 +493,12 @@ contract FundingManager is ReentrancyGuard {
      * @notice Only affects active, unfunded campaigns that have passed their deadline
      * @notice Campaigns that are already funded cannot expire
      * @notice This function prevents contributions to expired campaigns
+     * @notice Calls closeExpiredCampaign function for consistency
      *
      * @custom:security Internal function - cannot be called directly by users
      * @custom:security Automatically called in contribute() function
      * @custom:security No funds are transferred in this function
+     * @custom:security Delegates to centralized expiration logic
      */
     function _checkCampaignStatus(uint256 campaignId) internal {
         EventCampaign storage campaign = campaigns[campaignId];
@@ -502,8 +507,8 @@ contract FundingManager is ReentrancyGuard {
             campaign.isActive &&
             !campaign.isFunded
         ) {
-            campaign.isActive = false;
-            emit CampaignExpired(campaignId, campaign.raisedAmount);
+            // Call the public closeExpiredCampaign function for consistency
+            this.closeExpiredCampaign(campaignId);
         }
     }
 
