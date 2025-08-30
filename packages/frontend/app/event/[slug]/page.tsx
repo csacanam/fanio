@@ -547,6 +547,88 @@ export default function EventPage({ params }: EventPageProps) {
           </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="border-t py-12 px-4 bg-muted/30">
+        <div className="container mx-auto max-w-6xl">
+          <div className="grid md:grid-cols-4 gap-8">
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 fanio-gradient rounded-lg flex items-center justify-center">
+                  <Zap className="h-5 w-5 text-white" />
+                </div>
+                <h3 className="text-xl font-bold fanio-gradient-text">Fanio</h3>
+              </div>
+              <p className="text-muted-foreground text-sm">
+                Trustless crowdfunding for live events powered by blockchain technology.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-3">Platform</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>
+                  <Link href="/#how-it-works" className="hover:text-foreground">
+                    How It Works
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/#active-events" className="hover:text-foreground">
+                    Active Events
+                  </Link>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground">
+                    Create Event
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-3">Support</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>
+                  <a href="#" className="hover:text-foreground">
+                    FAQ
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground">
+                    Documentation
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground">
+                    Contact
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-3">Community</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>
+                  <a href="#" className="hover:text-foreground">
+                    Discord
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground">
+                    Twitter
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground">
+                    GitHub
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t mt-8 pt-8 text-center text-sm text-muted-foreground">
+            <p>&copy; 2024 Fanio. All rights reserved. Built with ❤️ for the music community.</p>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

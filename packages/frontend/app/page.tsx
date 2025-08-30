@@ -24,6 +24,13 @@ export default function FanioLanding() {
     }
   }
 
+  const scrollToHowItWorks = () => {
+    const howItWorksSection = document.getElementById("how-it-works")
+    if (howItWorksSection) {
+      howItWorksSection.scrollIntoView({ behavior: "smooth" })
+    }
+  }
+
   const demoEvent = {
     id: "bad-bunny-2025",
     title: "Bad Bunny World Tour 2025",
@@ -52,9 +59,6 @@ export default function FanioLanding() {
             </div>
             <h1 className="text-2xl font-bold fanio-gradient-text">Fanio</h1>
           </div>
-          <Button variant="outline" className="cursor-pointer bg-transparent">
-            Connect Wallet
-          </Button>
         </div>
       </header>
 
@@ -72,7 +76,7 @@ export default function FanioLanding() {
               Explore Events
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-            <Button size="lg" variant="outline" className="text-lg px-8 bg-transparent cursor-pointer">
+            <Button size="lg" variant="outline" className="text-lg px-8 bg-transparent cursor-pointer" onClick={scrollToHowItWorks}>
               How It Works
             </Button>
           </div>
@@ -210,7 +214,7 @@ export default function FanioLanding() {
       </section>
 
       {/* How It Works */}
-      <section className="py-16 px-4 bg-muted/30">
+      <section id="how-it-works" className="py-16 px-4 bg-muted/30">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">How Fanio Works</h2>
@@ -288,14 +292,14 @@ export default function FanioLanding() {
               <h4 className="font-semibold mb-3">Platform</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
-                  <a href="#" className="hover:text-foreground">
+                  <button onClick={scrollToHowItWorks} className="hover:text-foreground text-left">
                     How It Works
-                  </a>
+                  </button>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-foreground">
+                  <button onClick={scrollToEvents} className="hover:text-foreground text-left">
                     Active Events
-                  </a>
+                  </button>
                 </li>
                 <li>
                   <a href="#" className="hover:text-foreground">
