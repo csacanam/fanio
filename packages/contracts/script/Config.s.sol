@@ -33,7 +33,7 @@ contract Config is Script {
             return address(0);
         } else if (block.chainid == 84532) {
             // Base Sepolia - return the deployed address
-            return address(0x6323521927814F819aB99c7C46d75944C77467Ae);
+            return address(0xDEC2A229CfDBc512198c19ac63b67BdAAE20f42C);
         } else {
             // Unknown network
             revert("Unsupported network");

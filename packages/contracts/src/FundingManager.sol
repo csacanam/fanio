@@ -377,8 +377,12 @@ contract FundingManager is ReentrancyGuard {
 
         emit ContributionMade(campaignId, msg.sender, amount, userTokens);
 
-        // Check if funding target is reached (can finalize when target is met, even with excess)
-        if (campaign.raisedAmount >= campaign.targetAmount) {
+        // Check if funding target is reached (campaign closes when organizer goal + pool amount is reached)
+        // Organizer wants targetAmount (100 USDC) + 30% for pool = 130 USDC total
+        uint256 campaignGoal = campaign.targetAmount +
+            (campaign.targetAmount * 30) /
+            100;
+        if (campaign.raisedAmount >= campaignGoal) {
             _finalizeFunding(campaignId);
         }
     }
@@ -598,6 +602,22 @@ contract FundingManager is ReentrancyGuard {
             campaign.protocolFeesCollected,
             campaign.uniqueBackers
         );
+    }
+
+    /**
+     * @dev Get the real campaign goal (targetAmount + 30% for pool)
+     *
+     * @param campaignId ID of the campaign
+     * @return Real goal amount including pool allocation
+     *
+     * @notice This is the amount that needs to be raised for the campaign to close
+     * @notice Equal to targetAmount (what organizer wants) + 30% (for pool)
+     */
+    function getCampaignGoal(
+        uint256 campaignId
+    ) external view returns (uint256) {
+        EventCampaign storage campaign = campaigns[campaignId];
+        return campaign.targetAmount + (campaign.targetAmount * 30) / 100;
     }
 
     /**

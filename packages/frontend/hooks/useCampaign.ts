@@ -5,7 +5,8 @@ import { CONTRACTS, DEFAULT_NETWORK } from '@/config/contracts';
 // ABI for FundingManager contract (simplified for what we need)
 const FUNDING_MANAGER_ABI = [
   "function getCampaignStatus(uint256 campaignId) external view returns (bool isActive, bool isExpired, bool isFunded, uint256 timeLeft, uint256 raisedAmount, uint256 targetAmount, uint256 organizerDeposit, address fundingToken, uint256 protocolFeesCollected, uint256 uniqueBackers)",
-  "function getCampaignEventToken(uint256 campaignId) external view returns (address eventToken)"
+  "function getCampaignEventToken(uint256 campaignId) external view returns (address eventToken)",
+  "function getCampaignGoal(uint256 campaignId) external view returns (uint256)"
 ];
 
 // ABI for USDC contract (simplified)
@@ -27,6 +28,7 @@ export interface CampaignData {
   timeLeft: number;
   raisedAmount: string;
   targetAmount: string;
+  campaignGoal: string; // Real campaign goal (targetAmount + 30%)
   organizerDeposit: string;
   fundingToken: string;
   protocolFeesCollected: string;
@@ -71,6 +73,9 @@ export const useCampaign = (campaignId: number = 0) => {
       // Get campaign status
       const status = await fundingManager.getCampaignStatus(campaignId);
       
+      // Get campaign goal (real target for closing)
+      const campaignGoal = await fundingManager.getCampaignGoal(campaignId);
+      
       // Get event token
       const eventToken = await fundingManager.getCampaignEventToken(campaignId);
       
@@ -99,12 +104,13 @@ export const useCampaign = (campaignId: number = 0) => {
       // Format amounts
       const raisedAmount = ethers.formatUnits(status.raisedAmount, usdcDecimals);
       const targetAmount = ethers.formatUnits(status.targetAmount, usdcDecimals);
+      const campaignGoalFormatted = ethers.formatUnits(campaignGoal, usdcDecimals);
       const organizerDeposit = ethers.formatUnits(status.organizerDeposit, usdcDecimals);
       const protocolFeesCollected = ethers.formatUnits(status.protocolFeesCollected, usdcDecimals);
 
-      // Calculate progress
-      const progress = status.targetAmount > 0 
-        ? Number((status.raisedAmount * BigInt(100)) / status.targetAmount)
+      // Calculate progress based on real campaign goal (not organizer target)
+      const progress = campaignGoal > 0 
+        ? Number((status.raisedAmount * BigInt(100)) / campaignGoal)
         : 0;
 
       // Calculate time remaining
@@ -119,6 +125,7 @@ export const useCampaign = (campaignId: number = 0) => {
         timeLeft,
         raisedAmount,
         targetAmount,
+        campaignGoal: campaignGoalFormatted,
         organizerDeposit,
         fundingToken: status.fundingToken,
         protocolFeesCollected,

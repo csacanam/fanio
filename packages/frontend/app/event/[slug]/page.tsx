@@ -97,7 +97,8 @@ export default function EventPage({ params }: EventPageProps) {
 
   // Use real data if available, show loading state while fetching
   const currentProgress = campaignData ? parseFloat(campaignData.raisedAmount) : 0
-  const targetAmount = campaignData ? parseFloat(campaignData.targetAmount) : 0
+  const campaignGoal = campaignData ? parseFloat(campaignData.campaignGoal) : 0 // Real campaign goal (130 USDC)
+  const organizerTarget = campaignData ? parseFloat(campaignData.targetAmount) : 0 // What organizer wants (100 USDC)
   const progressPercentage = campaignData ? campaignData.progress : 0
 
   // Handle USDC approval
@@ -250,7 +251,7 @@ export default function EventPage({ params }: EventPageProps) {
     location: "Bogotá, Colombia",
     description:
       "We want to bring Taylor Swift to Colombia for the first time ever! With her massive global popularity and Colombia's passionate music culture, we believe there's huge demand for this pop experience in South America. Help us make history happen!",
-    target: targetAmount,
+    target: campaignGoal,
     current: currentProgress,
     backers: campaignData ? campaignData.uniqueBackers : 1247,
     daysLeft: campaignData ? campaignData.daysLeft : 23,
@@ -355,7 +356,7 @@ export default function EventPage({ params }: EventPageProps) {
                   <Gift className="h-5 w-5" />
                   Token Perks & Utilities
                 </CardTitle>
-                <CardDescription>What you can do with your ${campaignData?.tokenSymbol || 'TSBOG'} tokens</CardDescription>
+                <CardDescription>What you can do with your ${campaignData?.tokenSymbol || 'EVENT'} tokens</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-2 gap-4">
@@ -410,7 +411,7 @@ export default function EventPage({ params }: EventPageProps) {
                       <>
                         <div className="flex justify-between items-center mb-2">
                           <span className="text-2xl font-bold">${currentProgress.toLocaleString('en-US')} USDC</span>
-                          <span className="text-sm text-muted-foreground">of ${targetAmount.toLocaleString('en-US')}</span>
+                          <span className="text-sm text-muted-foreground">of ${campaignGoal.toLocaleString('en-US')}</span>
                         </div>
                         <Progress value={progressPercentage} className="h-3 progress-bar-glow" />
                         <div className="flex justify-between items-center mt-2">
@@ -509,7 +510,7 @@ export default function EventPage({ params }: EventPageProps) {
                       )}
                       
                       <p className="text-xs text-muted-foreground text-center">
-                        You'll receive ${campaignData?.tokenSymbol || 'TSBOG'} tokens equal to your USDC investment
+                        You'll receive ${campaignData?.tokenSymbol || 'EVENT'} tokens equal to your USDC investment
                       </p>
                     </div>
                   ) : (
@@ -518,15 +519,15 @@ export default function EventPage({ params }: EventPageProps) {
                         <TrendingUp className="h-8 w-8 text-primary mx-auto mb-2" />
                         <h3 className="font-semibold text-primary">Funding Complete!</h3>
                         <p className="text-sm text-muted-foreground mt-1">
-                          ${campaignData?.tokenSymbol || 'TSBOG'} tokens are now trading on the open market
+                          ${campaignData?.tokenSymbol || 'EVENT'} tokens are now trading on the open market
                         </p>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <Button variant="outline" size="sm">
-                          Buy ${campaignData?.tokenSymbol || 'TSBOG'}
+                          Buy ${campaignData?.tokenSymbol || 'EVENT'}
                         </Button>
                         <Button variant="outline" size="sm">
-                          Sell ${campaignData?.tokenSymbol || 'TSBOG'}
+                          Sell ${campaignData?.tokenSymbol || 'EVENT'}
                         </Button>
                       </div>
                       <div className="text-center text-sm text-muted-foreground">
@@ -558,7 +559,7 @@ export default function EventPage({ params }: EventPageProps) {
                     </div>
                     <div>
                       <p className="font-medium">Fund the Event</p>
-                      <p className="text-sm text-muted-foreground">Buy $TSBOG tokens with USDC</p>
+                      <p className="text-sm text-muted-foreground">Buy ${campaignData?.tokenSymbol || 'EVENT'} tokens with USDC</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -600,7 +601,7 @@ export default function EventPage({ params }: EventPageProps) {
                     <Gift className="h-5 w-5" />
                     Token Perks & Utilities
                   </CardTitle>
-                  <CardDescription>What you can do with your $TSBOG tokens</CardDescription>
+                  <CardDescription>What you can do with your ${campaignData?.tokenSymbol || 'EVENT'} tokens</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="grid md:grid-cols-2 gap-4">
@@ -633,7 +634,7 @@ export default function EventPage({ params }: EventPageProps) {
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground leading-relaxed">
-                    {demoEvent.description} By funding this event, you'll receive $TSBOG tokens that give you exclusive
+                    {demoEvent.description} By funding this event, you'll receive ${campaignData?.tokenSymbol || 'EVENT'} tokens that give you exclusive
                     perks and the ability to trade on the open market once funding is complete.
                   </p>
                 </CardContent>
@@ -701,7 +702,7 @@ export default function EventPage({ params }: EventPageProps) {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground leading-relaxed">
-                  {demoEvent.description} By funding this proposal, you'll receive $TSBOG tokens that give you exclusive
+                                      {demoEvent.description} By funding this proposal, you'll receive ${campaignData?.tokenSymbol || 'EVENT'} tokens that give you exclusive
                   perks and the ability to trade on the open market once funding is complete.
                 </p>
               </CardContent>
@@ -793,7 +794,7 @@ export default function EventPage({ params }: EventPageProps) {
                     <>
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-2xl font-bold">${currentProgress.toLocaleString('en-US')} USDC</span>
-                        <span className="text-sm text-muted-foreground">of ${targetAmount.toLocaleString('en-US')}</span>
+                        <span className="text-sm text-muted-foreground">of ${campaignGoal.toLocaleString('en-US')}</span>
                       </div>
                       <Progress value={progressPercentage} className="h-3 progress-bar-glow" />
                       <div className="flex justify-between items-center mt-2">
@@ -892,7 +893,7 @@ export default function EventPage({ params }: EventPageProps) {
                     )}
                     
                     <p className="text-xs text-muted-foreground text-center">
-                      You'll receive ${campaignData?.tokenSymbol || 'TSBOG'} tokens equal to your USDC investment
+                      You'll receive ${campaignData?.tokenSymbol || 'EVENT'} tokens equal to your USDC investment
                     </p>
                   </div>
                 ) : (
@@ -901,15 +902,15 @@ export default function EventPage({ params }: EventPageProps) {
                       <TrendingUp className="h-8 w-8 text-primary mx-auto mb-2" />
                       <h3 className="font-semibold text-primary">Funding Complete!</h3>
                                                                                              <p className="text-sm text-muted-foreground mt-1">
-                           $TSBOG tokens are now trading on the open market
+                           ${campaignData?.tokenSymbol || 'EVENT'} tokens are now trading on the open market
                          </p>
                     </div>
                                                                                      <div className="grid grid-cols-2 gap-2">
                          <Button variant="outline" size="sm">
-                           Buy $TSBOG
+                           Buy ${campaignData?.tokenSymbol || 'EVENT'}
                          </Button>
                          <Button variant="outline" size="sm">
-                           Sell $TSBOG
+                           Sell ${campaignData?.tokenSymbol || 'EVENT'}
                          </Button>
                        </div>
                                           <div className="text-center text-sm text-muted-foreground">
@@ -938,7 +939,7 @@ export default function EventPage({ params }: EventPageProps) {
                   </div>
                   <div>
                                           <p className="font-medium">Fund the Event</p>
-                      <p className="text-sm text-muted-foreground">Buy $TSBOG tokens with USDC</p>
+                      <p className="text-sm text-muted-foreground">Buy ${campaignData?.tokenSymbol || 'EVENT'} tokens with USDC</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">

@@ -44,7 +44,7 @@ export default function FanioLanding() {
     location: "Bogotá, Colombia",
     description:
       "Experience the most anticipated pop concert in Colombia! Taylor Swift's first-ever performance in South America's most passionate music country.",
-    target: 100,
+    target: 130, // Updated to match real campaign goal
     current: 0,
     backers: 0,
     daysLeft: 30,
@@ -56,7 +56,7 @@ export default function FanioLanding() {
   const eventData = campaignData ? {
     ...fallbackEvent,
     current: parseFloat(campaignData.raisedAmount),
-    target: parseFloat(campaignData.targetAmount),
+    target: parseFloat(campaignData.campaignGoal), // Use real campaign goal (130 USDC) instead of organizer target (100 USDC)
     daysLeft: campaignData.daysLeft,
     progress: campaignData.progress,
     backers: campaignData.uniqueBackers,

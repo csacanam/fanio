@@ -1,5 +1,5 @@
 // Auto-generated contract configuration
-// Updated on: 2025-08-30T19:30:00.493Z
+// Updated on: 2025-08-30T22:36:16.045Z
 // Network: Base Sepolia
 
 export const CONTRACTS = {
@@ -8,7 +8,7 @@ export const CONTRACTS = {
     usdc: "0x0000000000000000000000000000000000000000" // Placeholder for local
   },
   baseSepolia: {
-    fundingManager: "0x6323521927814f819ab99c7c46d75944c77467ae",
+    fundingManager: "0xdec2a229cfdbc512198c19ac63b67bdaae20f42c",
     usdc: "0x7de9a0c146Cc6A92F2592C5E4e2331B263De88B1"
   }
 } as const;
@@ -24,7 +24,7 @@ export const getContractAddresses = (network: Network): ContractAddresses => {
 // Default to Base Sepolia for now
 export const DEFAULT_NETWORK: Network = "baseSepolia";
 
-// Network explorer URLs
+// Explorer URLs for each network
 export const EXPLORERS = {
   local: "http://localhost:8545", // Placeholder for local
   baseSepolia: "https://sepolia.basescan.org"
