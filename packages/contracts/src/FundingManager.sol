@@ -10,13 +10,14 @@ import "./EventToken.sol";
  * @dev Minimal MVP for trustless crowdfunding campaigns
  */
 contract FundingManager is ReentrancyGuard {
-    // Funding currency (USDC)
-    IERC20 public immutable FUNDING_TOKEN;
+    // Default funding currency (USDC) - can be overridden per campaign
+    IERC20 public immutable DEFAULT_FUNDING_TOKEN;
 
     // Campaign storage
     struct EventCampaign {
         address eventToken;
         address organizer;
+        address fundingToken;  // Custom funding token for this campaign
         uint256 targetAmount;
         uint256 raisedAmount;
         uint256 deadline;
@@ -33,6 +34,7 @@ contract FundingManager is ReentrancyGuard {
         uint256 indexed campaignId,
         address indexed organizer,
         address eventToken,
+        address fundingToken,
         uint256 targetAmount,
         uint256 deadline
     );
@@ -51,8 +53,8 @@ contract FundingManager is ReentrancyGuard {
         uint256 amount
     );
 
-    constructor(address fundingToken) {
-        FUNDING_TOKEN = IERC20(fundingToken);
+    constructor(address defaultFundingToken) {
+        DEFAULT_FUNDING_TOKEN = IERC20(defaultFundingToken);
     }
 
     /**
@@ -62,7 +64,8 @@ contract FundingManager is ReentrancyGuard {
         string memory tokenName,
         string memory tokenSymbol,
         uint256 targetAmount,
-        uint256 durationDays
+        uint256 durationDays,
+        address fundingToken  // Custom funding token (use address(0) for default)
     ) external returns (uint256 campaignId) {
         require(targetAmount > 0, "Target amount must be positive");
         require(durationDays > 0, "Duration must be positive");
@@ -70,9 +73,12 @@ contract FundingManager is ReentrancyGuard {
         // Calculate required deposit (10% of target)
         uint256 requiredDeposit = targetAmount / 10; // 10%
 
-        // Transfer USDC from organizer to contract
+        // Use custom funding token or default
+        IERC20 tokenToUse = fundingToken == address(0) ? DEFAULT_FUNDING_TOKEN : IERC20(fundingToken);
+
+        // Transfer tokens from organizer to contract
         require(
-            FUNDING_TOKEN.transferFrom(
+            tokenToUse.transferFrom(
                 msg.sender,
                 address(this),
                 requiredDeposit
@@ -93,6 +99,7 @@ contract FundingManager is ReentrancyGuard {
         campaigns[campaignId] = EventCampaign({
             eventToken: address(eventToken),
             organizer: msg.sender,
+            fundingToken: address(tokenToUse),
             targetAmount: targetAmount,
             raisedAmount: 0,
             deadline: deadline,
@@ -104,6 +111,7 @@ contract FundingManager is ReentrancyGuard {
             campaignId,
             msg.sender,
             address(eventToken),
+            address(tokenToUse),
             targetAmount,
             deadline
         );
@@ -117,17 +125,18 @@ contract FundingManager is ReentrancyGuard {
         uint256 amount
     ) external nonReentrant {
         EventCampaign storage campaign = campaigns[campaignId];
-        
+
         // Check and update campaign status before processing
         _checkCampaignStatus(campaignId);
-        
+
         require(campaign.isActive, "Campaign not active");
         require(amount > 0, "Amount must be positive");
         require(!campaign.isFunded, "Campaign already funded");
 
-        // Transfer USDC from contributor
+        // Transfer tokens from contributor using campaign's funding token
+        IERC20 campaignToken = IERC20(campaign.fundingToken);
         require(
-            FUNDING_TOKEN.transferFrom(msg.sender, address(this), amount),
+            campaignToken.transferFrom(msg.sender, address(this), amount),
             "Transfer failed"
         );
 
@@ -168,8 +177,10 @@ contract FundingManager is ReentrancyGuard {
         // Organizer receives the full target amount
         uint256 organizerAmount = campaign.targetAmount;
 
+        // Transfer tokens to organizer using campaign's funding token
+        IERC20 campaignToken = IERC20(campaign.fundingToken);
         require(
-            FUNDING_TOKEN.transfer(msg.sender, organizerAmount),
+            campaignToken.transfer(msg.sender, organizerAmount),
             "Transfer failed"
         );
 
@@ -183,7 +194,10 @@ contract FundingManager is ReentrancyGuard {
     function closeExpiredCampaign(uint256 campaignId) external {
         EventCampaign storage campaign = campaigns[campaignId];
         require(campaign.isActive, "Campaign not active");
-        require(block.timestamp >= campaign.deadline, "Campaign not expired yet");
+        require(
+            block.timestamp >= campaign.deadline,
+            "Campaign not expired yet"
+        );
         require(!campaign.isFunded, "Campaign already funded");
 
         campaign.isActive = false;
@@ -199,7 +213,11 @@ contract FundingManager is ReentrancyGuard {
      */
     function _checkCampaignStatus(uint256 campaignId) internal {
         EventCampaign storage campaign = campaigns[campaignId];
-        if (block.timestamp >= campaign.deadline && campaign.isActive && !campaign.isFunded) {
+        if (
+            block.timestamp >= campaign.deadline &&
+            campaign.isActive &&
+            !campaign.isFunded
+        ) {
             campaign.isActive = false;
             emit CampaignExpired(campaignId, campaign.raisedAmount);
         }
@@ -215,23 +233,48 @@ contract FundingManager is ReentrancyGuard {
      * @return raisedAmount Total amount raised so far
      * @return targetAmount Funding goal amount
      */
-    function getCampaignStatus(uint256 campaignId) external view returns (
-        bool isActive,
-        bool isExpired,
-        bool isFunded,
-        uint256 timeLeft,
-        uint256 raisedAmount,
-        uint256 targetAmount
-    ) {
+    function getCampaignStatus(
+        uint256 campaignId
+    )
+        external
+        view
+        returns (
+            bool isActive,
+            bool isExpired,
+            bool isFunded,
+            uint256 timeLeft,
+            uint256 raisedAmount,
+            uint256 targetAmount
+        )
+    {
         EventCampaign storage campaign = campaigns[campaignId];
-        
+
         isActive = campaign.isActive;
         isExpired = block.timestamp >= campaign.deadline;
         isFunded = campaign.isFunded;
-        timeLeft = block.timestamp >= campaign.deadline ? 0 : campaign.deadline - block.timestamp;
+        timeLeft = block.timestamp >= campaign.deadline
+            ? 0
+            : campaign.deadline - block.timestamp;
         raisedAmount = campaign.raisedAmount;
         targetAmount = campaign.targetAmount;
-        
-        return (isActive, isExpired, isFunded, timeLeft, raisedAmount, targetAmount);
+
+        return (
+            isActive,
+            isExpired,
+            isFunded,
+            timeLeft,
+            raisedAmount,
+            targetAmount
+        );
+    }
+
+    /**
+     * @dev Get the funding token address for a specific campaign
+     * @param campaignId The ID of the campaign to query
+     * @return fundingToken The address of the funding token used by this campaign
+     */
+    function getCampaignFundingToken(uint256 campaignId) external view returns (address fundingToken) {
+        EventCampaign storage campaign = campaigns[campaignId];
+        return campaign.fundingToken;
     }
 }
