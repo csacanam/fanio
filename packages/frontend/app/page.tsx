@@ -137,40 +137,40 @@ export default function FanioLanding() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Link href={`/event/${demoEvent.slug}`}>
               <Card className="cursor-pointer fanio-card-hover event-card">
-                <div className="relative">
-                  <img
-                    src={demoEvent.image || "/placeholder.svg"}
-                    alt={demoEvent.title}
-                    className="w-full h-48 object-cover rounded-t-lg"
-                  />
+              <div className="relative">
+                <img
+                  src={demoEvent.image || "/placeholder.svg"}
+                  alt={demoEvent.title}
+                  className="w-full h-48 object-cover rounded-t-lg"
+                />
                   <Badge className="absolute top-3 right-3 fanio-gradient text-white border-0">
                     {demoEvent.daysLeft} days left
                   </Badge>
-                </div>
-                <CardContent className="p-4">
-                  <h3 className="font-bold text-lg mb-1 text-balance">{demoEvent.title}</h3>
-                  <p className="text-muted-foreground text-sm mb-3">
-                    {demoEvent.venue} • {demoEvent.location}
-                  </p>
+              </div>
+              <CardContent className="p-4">
+                <h3 className="font-bold text-lg mb-1 text-balance">{demoEvent.title}</h3>
+                <p className="text-muted-foreground text-sm mb-3">
+                  {demoEvent.venue} • {demoEvent.location}
+                </p>
 
-                  <div className="space-y-2 mb-4">
-                    <div className="flex justify-between text-sm">
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between text-sm">
                       <span>${demoEvent.current.toLocaleString('en-US')} raised</span>
-                      <span>{((demoEvent.current / demoEvent.target) * 100).toFixed(0)}%</span>
+                    <span>{((demoEvent.current / demoEvent.target) * 100).toFixed(0)}%</span>
                     </div>
                     <Progress value={(demoEvent.current / demoEvent.target) * 100} className="h-2 progress-bar-glow" />
                     <p className="text-xs text-muted-foreground">Goal: ${demoEvent.target.toLocaleString('en-US')} USDC</p>
-                  </div>
+                </div>
 
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
                     <span>{demoEvent.backers.toLocaleString('en-US')} backers</span>
-                    <span className="flex items-center gap-1">
-                      <Ticket className="h-4 w-4" />
-                      $BBNY25 tokens
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
+                  <span className="flex items-center gap-1">
+                    <Ticket className="h-4 w-4" />
+                    $BBNY25 tokens
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
             </Link>
 
             {/* Placeholder cards */}
