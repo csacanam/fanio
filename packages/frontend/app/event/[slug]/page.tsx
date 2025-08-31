@@ -6,6 +6,7 @@ import { useContribution } from "@/hooks/useContribution"
 import { useWallet } from "@/hooks/useWallet"
 import { SuccessDialog } from "@/components/ui/success-dialog"
 import { ErrorDialog } from "@/components/ui/error-dialog"
+import { TradingModal } from "@/components/ui/trading-modal"
 import { ClientOnly } from "@/components/ui/client-only"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -129,6 +130,10 @@ export default function EventPage({ params }: EventPageProps) {
   const [showErrorDialog, setShowErrorDialog] = useState(false)
   const [successData, setSuccessData] = useState<{title: string, message: string, txHash?: string} | null>(null)
   const [errorData, setErrorData] = useState<{title: string, message: string, type?: 'contribution' | 'approval'} | null>(null)
+  
+  // Trading modal state
+  const [showTradingModal, setShowTradingModal] = useState(false)
+  const [tradingMode, setTradingModal] = useState<'buy' | 'sell'>('buy')
 
   // Use real data if available, show loading state while fetching
   const currentProgress = campaignData ? parseFloat(campaignData.raisedAmount) : 0
@@ -285,6 +290,8 @@ export default function EventPage({ params }: EventPageProps) {
 
   const buttonConfig = getButtonConfig();
 
+
+
   const scrollToPromoter = () => {
     // Try desktop version first, then mobile
     let promoterSection = document.getElementById('about-promoter')
@@ -294,6 +301,26 @@ export default function EventPage({ params }: EventPageProps) {
     if (promoterSection) {
       promoterSection.scrollIntoView({ behavior: "smooth" })
     }
+  }
+
+  // Trading functions
+  const handleBuyTokens = async (amount: number) => {
+    // TODO: Implement actual buy logic
+    console.log('Buying', amount, 'tokens')
+    // For now, just simulate a delay
+    await new Promise(resolve => setTimeout(resolve, 2000))
+  }
+
+  const handleSellTokens = async (amount: number) => {
+    // TODO: Implement actual sell logic
+    console.log('Selling', amount, 'tokens')
+    // For now, just simulate a delay
+    await new Promise(resolve => setTimeout(resolve, 2000))
+  }
+
+  const openTradingModal = (mode: 'buy' | 'sell') => {
+    setTradingModal(mode)
+    setShowTradingModal(true)
   }
 
   // Event data - use real contract data when available
@@ -580,12 +607,42 @@ export default function EventPage({ params }: EventPageProps) {
                         </p>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            console.log('=== BUY BUTTON CLICKED ===')
+                            console.log('Button clicked successfully')
+                            console.log('campaignData:', campaignData)
+                            console.log('tokenSymbol:', campaignData?.tokenSymbol)
+                            openTradingModal('buy')
+                            console.log('openTradingModal called')
+                          }}
+                        >
                           Buy ${campaignData?.tokenSymbol || 'EVENT'}
                         </Button>
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            console.log('=== SELL BUTTON CLICKED ===')
+                            console.log('Button clicked successfully')
+                            console.log('campaignData:', campaignData)
+                            console.log('tokenSymbol:', campaignData?.tokenSymbol)
+                            openTradingModal('sell')
+                            console.log('openTradingModal called')
+                          }}
+                        >
                           Sell ${campaignData?.tokenSymbol || 'EVENT'}
                         </Button>
+                      </div>
+                      
+                      {/* Debug: Show campaign data */}
+                      <div className="text-xs text-muted-foreground p-2 bg-muted/30 rounded border">
+                        <p>Debug - Campaign Data:</p>
+                        <p>tokenSymbol: {campaignData?.tokenSymbol || 'undefined'}</p>
+                        <p>tokenName: {campaignData?.tokenName || 'undefined'}</p>
+                        <p>isFunded: {campaignData?.isFunded?.toString() || 'undefined'}</p>
                       </div>
                       <div className="text-center text-sm text-muted-foreground">
                         <p>Funding Price: $1.00 USDC</p>
@@ -963,13 +1020,22 @@ export default function EventPage({ params }: EventPageProps) {
                          </p>
                     </div>
                                                                                      <div className="grid grid-cols-2 gap-2">
-                         <Button variant="outline" size="sm">
+                         <Button 
+                           variant="outline" 
+                           size="sm"
+                           onClick={() => openTradingModal('buy')}
+                         >
                            Buy ${campaignData?.tokenSymbol || 'EVENT'}
                          </Button>
-                         <Button variant="outline" size="sm">
+                         <Button 
+                           variant="outline" 
+                           size="sm"
+                           onClick={() => openTradingModal('sell')}
+                         >
                            Sell ${campaignData?.tokenSymbol || 'EVENT'}
                          </Button>
                        </div>
+                       
                                           <div className="text-center text-sm text-muted-foreground">
                         <p>Funding Price: $1.00 USDC</p>
                         <p className="text-primary">1:1 ratio during funding phase</p>
@@ -1146,6 +1212,19 @@ export default function EventPage({ params }: EventPageProps) {
           message={errorData.message}
         />
       )}
+
+      {/* Trading Modal */}
+      <TradingModal
+        isOpen={showTradingModal}
+        onClose={() => setShowTradingModal(false)}
+        tokenSymbol={campaignData?.tokenSymbol || 'EVENT'}
+        currentPrice={1.00} // TODO: Get real price from contract
+        onBuy={handleBuyTokens}
+        onSell={handleSellTokens}
+        userBalance={1000} // TODO: Get real balance from contract
+        isLoading={false}
+        initialMode={tradingMode}
+      />
     </div>
   )
 }
