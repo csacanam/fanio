@@ -2,6 +2,7 @@
 pragma solidity ^0.8.26;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./EventToken.sol";
 
@@ -266,15 +267,17 @@ contract FundingManager is ReentrancyGuard {
         campaignId = nextCampaignId++;
         uint256 deadline = block.timestamp + (durationDays * 1 days);
 
-        // Calculate cap: 130% for contributors (1:1) + 25% extra for pool (1.2x price)
-        uint256 cap = (targetAmount * 155) / 100;
+        // Calculate cap: 155% of target amount, accounting for decimal differences
+        uint256 cap = _calculateTokenCap(targetAmount, address(tokenToUse), 18); // EventToken will use 18 decimals
 
         // Deploy EventToken with FundingManager address
+        // Use 18 decimals by default for compatibility with most networks
         EventToken eventToken = new EventToken(
             tokenName,
             tokenSymbol,
             cap,
-            address(this)
+            address(this),
+            18 // Default decimals for EventToken
         );
 
         // Create campaign
@@ -370,9 +373,34 @@ contract FundingManager is ReentrancyGuard {
             campaign.uniqueBackers++;
         }
 
-        // Mint tokens immediately to contributor (1:1 ratio)
+        // Mint tokens immediately to contributor (1:1 ratio with decimal adjustment)
         EventToken eventToken = EventToken(campaign.eventToken);
-        uint256 userTokens = amount; // 1:1 ratio with contribution
+        uint256 tokenDecimals = eventToken.decimals();
+
+        // Get funding token decimals dynamically by calling decimals() on the token contract
+        // This makes it completely generic for any ERC20 token (6, 18, or any other decimals)
+        uint256 fundingTokenDecimals;
+        try IERC20Metadata(campaign.fundingToken).decimals() returns (
+            uint8 decimals
+        ) {
+            fundingTokenDecimals = decimals;
+        } catch {
+            // Fallback: if we can't get decimals, assume 18 (most common for ERC20)
+            fundingTokenDecimals = 18;
+        }
+
+        // Adjust for decimal difference between funding token and event token
+        uint256 userTokens;
+        if (tokenDecimals > fundingTokenDecimals) {
+            // Event token has more decimals, multiply by the difference
+            uint256 multiplier = 10 ** (tokenDecimals - fundingTokenDecimals);
+            userTokens = amount * multiplier;
+        } else {
+            // Event token has fewer decimals, divide by the difference
+            uint256 divisor = 10 ** (fundingTokenDecimals - tokenDecimals);
+            userTokens = amount / divisor;
+        }
+
         eventToken.mint(msg.sender, userTokens);
 
         emit ContributionMade(campaignId, msg.sender, amount, userTokens);
@@ -419,7 +447,21 @@ contract FundingManager is ReentrancyGuard {
 
         // 1. Mint pool tokens (25% of target for initial liquidity)
         EventToken eventToken = EventToken(campaign.eventToken);
-        uint256 poolTokens = (campaign.targetAmount * 25) / 100;
+
+        // Convert pool tokens from funding token units to event token units
+        // This ensures consistency with the token minting logic in contribute()
+        uint256 poolTokensInFundingUnits = (campaign.targetAmount * 25) / 100;
+
+        // Get EventToken decimals dynamically
+        EventToken eventTokenContract = EventToken(campaign.eventToken);
+        uint8 eventTokenDecimals = eventTokenContract.decimals();
+
+        uint256 poolTokens = _convertToEventTokenUnits(
+            poolTokensInFundingUnits,
+            campaign.fundingToken,
+            eventTokenDecimals
+        );
+
         eventToken.mint(address(this), poolTokens);
 
         emit TokensMinted(campaignId, poolTokens);
@@ -630,6 +672,74 @@ contract FundingManager is ReentrancyGuard {
         uint256 campaignId
     ) external view returns (address) {
         return campaigns[campaignId].eventToken;
+    }
+
+    /**
+     * @dev Calculate the token cap accounting for decimal differences
+     *
+     * @param targetAmount Target amount in funding token units
+     * @param fundingToken Address of the funding token
+     * @param eventTokenDecimals Number of decimals for the EventToken
+     * @return Cap amount in event token units (155% of target)
+     *
+     * @notice This function converts the target amount from funding token units
+     * to event token units, accounting for decimal differences
+     */
+    function _calculateTokenCap(
+        uint256 targetAmount,
+        address fundingToken,
+        uint8 eventTokenDecimals
+    ) internal view returns (uint256) {
+        // Get decimals dynamically from funding token
+        uint256 fundingTokenDecimals = IERC20Metadata(fundingToken).decimals();
+
+        // Convert targetAmount from funding token units to event token units
+        uint256 targetInEventTokenUnits;
+        if (eventTokenDecimals > fundingTokenDecimals) {
+            // Event token has more decimals, multiply by the difference
+            uint256 multiplier = 10 **
+                (eventTokenDecimals - fundingTokenDecimals);
+            targetInEventTokenUnits = targetAmount * multiplier;
+        } else {
+            // Event token has fewer decimals, divide by the difference
+            uint256 divisor = 10 ** (fundingTokenDecimals - eventTokenDecimals);
+            targetInEventTokenUnits = targetAmount / divisor;
+        }
+
+        // Calculate cap: 155% of target in event token units
+        return (targetInEventTokenUnits * 155) / 100;
+    }
+
+    /**
+     * @dev Convert funding token units to event token units
+     *
+     * @param amount Amount in funding token units
+     * @param fundingToken Address of the funding token
+     * @param eventTokenDecimals Number of decimals for the EventToken
+     * @return Amount in event token units
+     *
+     * @notice This function converts amounts from funding token units to event token units
+     * accounting for decimal differences, ensuring consistency across all token operations
+     */
+    function _convertToEventTokenUnits(
+        uint256 amount,
+        address fundingToken,
+        uint8 eventTokenDecimals
+    ) internal view returns (uint256) {
+        // Get decimals dynamically from funding token
+        uint256 fundingTokenDecimals = IERC20Metadata(fundingToken).decimals();
+
+        // Convert amount from funding token units to event token units
+        if (eventTokenDecimals > fundingTokenDecimals) {
+            // Event token has more decimals, multiply by the difference
+            uint256 multiplier = 10 **
+                (eventTokenDecimals - fundingTokenDecimals);
+            return amount * multiplier;
+        } else {
+            // Event token has fewer decimals, divide by the difference
+            uint256 divisor = 10 ** (fundingTokenDecimals - eventTokenDecimals);
+            return amount / divisor;
+        }
     }
 }
 

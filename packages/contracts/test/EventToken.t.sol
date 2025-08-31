@@ -35,7 +35,8 @@ contract EventTokenTest is Test {
             "Test Event Token",
             "TEST",
             TOKEN_CAP, // Use the pre-calculated cap in token units
-            address(fundingManager)
+            address(fundingManager),
+            18 // Use 18 decimals for EventToken
         );
     }
 

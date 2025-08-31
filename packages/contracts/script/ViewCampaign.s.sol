@@ -9,7 +9,7 @@ import {console} from "forge-std/console.sol";
 contract ViewCampaign is Script {
     function run() external {
         // Get campaign ID from function parameter
-        uint256 campaignId = 0; // Default to campaign 0, can be modified in the script
+        uint256 campaignId = 0; // View campaign 0 (the one we just created in the new contract)
 
         // Get configuration based on network
         Config config = new Config();

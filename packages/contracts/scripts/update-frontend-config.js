@@ -99,6 +99,15 @@ export const getContractAddresses = (network: Network): ContractAddresses => {
 
 // Default to Base Sepolia for now
 export const DEFAULT_NETWORK: Network = "baseSepolia";
+
+export const EXPLORERS = {
+  local: "http://localhost:8545", // Placeholder for local
+  baseSepolia: "https://sepolia.basescan.org"
+} as const;
+
+export const getExplorerUrl = (network: Network): string => {
+  return EXPLORERS[network];
+};
 `;
 
     // Write the config file

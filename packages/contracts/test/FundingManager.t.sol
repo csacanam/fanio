@@ -178,21 +178,28 @@ contract FundingManagerTest is Test {
 
         // Verify EventToken minting
         uint256 totalSupply = eventToken.totalSupply();
-        uint256 expectedTotalSupply = TOTAL_TO_RAISE +
-            (TARGET_AMOUNT * 25) /
-            100; // 130k + 25k = 155k
+
+        // Calculate expected total supply accounting for decimal conversion
+        // TOTAL_TO_RAISE = 130_000e6 (130k USDC) -> 130_000e18 (130k TSBOG)
+        // TARGET_AMOUNT = 100_000e6 (100k USDC) -> 100_000e18 (100k TSBOG)
+        // Pool tokens = 25% of target = 25_000e18 (25k TSBOG)
+        // Expected total = 130k + 25k = 155k TSBOG
+        uint256 expectedTotalSupply = (TOTAL_TO_RAISE * 1e12) + // Convert 130k USDC to TSBOG
+            ((TARGET_AMOUNT * 25) / 100) *
+            1e12; // Convert 25k USDC to TSBOG
 
         assertEq(totalSupply, expectedTotalSupply);
 
         // Verify pool tokens are minted to contract (25% of target, not total raised)
         uint256 poolTokens = eventToken.balanceOf(address(fundingManager));
-        uint256 expectedPoolTokens = (TARGET_AMOUNT * 25) / 100; // 25k tokens (25% de 100k)
+        uint256 expectedPoolTokens = ((TARGET_AMOUNT * 25) / 100) * 1e12; // 25k TSBOG (25% de 100k)
 
         assertEq(poolTokens, expectedPoolTokens);
 
         // Verify contributor1 received tokens (1:1 ratio with contribution)
         uint256 contributor1Tokens = eventToken.balanceOf(contributor1);
-        assertEq(contributor1Tokens, TOTAL_TO_RAISE); // 130k tokens
+        uint256 expectedContributorTokens = TOTAL_TO_RAISE * 1e12; // 130k TSBOG
+        assertEq(contributor1Tokens, expectedContributorTokens);
     }
 
     function test_CloseExpiredCampaign() public {

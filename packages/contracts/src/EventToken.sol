@@ -55,11 +55,13 @@ contract EventToken is ERC20Capped {
      * @param _symbol Short token symbol (e.g., "BBNY25")
      * @param _cap Maximum total supply (155% of funding target)
      * @param _fundingManager Address of the FundingManager contract
+     * @param _decimals Number of decimal places for the token (e.g., 18, 6, 12)
      *
      * @notice Token name and symbol should be descriptive of the specific event
      * @notice Cap is calculated as: targetAmount * 155 / 100
      * @notice FundingManager address is immutable and cannot be changed
      * @notice Token is immediately ready for minting by FundingManager
+     * @notice Decimals can be customized for different use cases and networks
      *
      * @custom:security Validates fundingManager is not zero address
      * @custom:security Inherits OpenZeppelin ERC20Capped security features
@@ -68,13 +70,16 @@ contract EventToken is ERC20Capped {
         string memory _name,
         string memory _symbol,
         uint256 _cap,
-        address _fundingManager
+        address _fundingManager,
+        uint8 _decimals
     ) ERC20(_name, _symbol) ERC20Capped(_cap) {
         require(
             _fundingManager != address(0),
             "Invalid funding manager address"
         );
+        require(_decimals <= 18, "Decimals cannot exceed 18");
         FUNDING_MANAGER = _fundingManager;
+        _customDecimals = _decimals; // Store custom decimals
     }
 
     // ========================================
@@ -113,6 +118,25 @@ contract EventToken is ERC20Capped {
         require(totalSupply() + amount <= cap(), "Exceeds max supply");
 
         _mint(to, amount);
+    }
+
+    // ========================================
+    // DECIMALS OVERRIDE
+    // ========================================
+
+    /// @notice Custom decimals for this token
+    uint8 private immutable _customDecimals;
+
+    /**
+     * @dev Override decimals function to return custom decimals
+     *
+     * @return Number of decimal places for this token
+     *
+     * @notice This allows EventTokens to have different decimal places
+     * @notice Useful for different networks or use cases
+     */
+    function decimals() public view virtual override returns (uint8) {
+        return _customDecimals;
     }
 }
 
