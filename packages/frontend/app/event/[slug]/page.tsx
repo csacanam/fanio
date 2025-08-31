@@ -63,6 +63,7 @@ export default function EventPage({ params }: EventPageProps) {
   const { 
     contribute, 
     approveUSDC, 
+    checkAllowanceForAmount,
     isApproving, 
     isContributing, 
     isApproved, 
@@ -74,13 +75,13 @@ export default function EventPage({ params }: EventPageProps) {
     explorerUrl
   } = useContribution(0);
   
-  // Function to refresh campaign data with retry logic
+  // Function to refresh campaign data with optimized retry logic
   const refreshCampaignData = async () => {
     console.log('Refreshing campaign data from blockchain...');
     
     // Try multiple times with delays to ensure blockchain state is updated
     const maxRetries = 3;
-    const baseDelay = 2000; // 2 seconds base delay
+    const baseDelay = 500; // Reduced from 2000ms to 500ms
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -98,9 +99,9 @@ export default function EventPage({ params }: EventPageProps) {
           console.log('Data unchanged, will retry...');
         }
         
-        // Wait before next attempt (exponential backoff)
+        // Wait before next attempt (reduced delays)
         if (attempt < maxRetries) {
-          const delay = baseDelay * attempt;
+          const delay = baseDelay * attempt; // 500ms, 1000ms, 1500ms
           console.log(`Waiting ${delay}ms before retry...`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
@@ -110,7 +111,7 @@ export default function EventPage({ params }: EventPageProps) {
         
         // Wait before retry
         if (attempt < maxRetries) {
-          const delay = baseDelay * attempt;
+          const delay = baseDelay * attempt; // 500ms, 1000ms, 1500ms
           console.log(`Waiting ${delay}ms before retry...`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
@@ -149,6 +150,13 @@ export default function EventPage({ params }: EventPageProps) {
       console.log('🚀 Marketplace is now open!');
     }
   }, [showMarketplace]);
+
+  // Check allowance when investment amount changes
+  useEffect(() => {
+    if (investmentAmount && isConnected && address) {
+      checkAllowanceForAmount(investmentAmount, address);
+    }
+  }, [investmentAmount, isConnected, address, checkAllowanceForAmount]);
 
   // Handle USDC approval
   const handleApproval = async () => {
@@ -199,11 +207,9 @@ export default function EventPage({ params }: EventPageProps) {
       setShowSuccessDialog(true);
       setInvestmentAmount(""); // Clear input
       
-      // Refresh campaign data with delay to ensure blockchain state is updated
-      console.log('Transaction confirmed, will refresh campaign data in 3 seconds...');
-      setTimeout(() => {
-        refreshCampaignData();
-      }, 3000); // Wait 3 seconds for blockchain to update
+      // Refresh campaign data immediately to show updated values
+      console.log('Transaction confirmed, refreshing campaign data...');
+      refreshCampaignData();
     }
   }, [contributionSuccess, transactionHash]);
 
@@ -256,7 +262,7 @@ export default function EventPage({ params }: EventPageProps) {
           text: "Waiting for approval...",
           onClick: () => {}, // No action while pending
           disabled: true,
-          variant: "outline" as const
+          variant: "secondary" as const
         };
       }
       
@@ -264,7 +270,7 @@ export default function EventPage({ params }: EventPageProps) {
         text: isApproving ? "Approving USDC..." : "Approve USDC",
         onClick: handleApproval,
         disabled: isApproving,
-        variant: "outline" as const
+        variant: "secondary" as const
       };
     }
     

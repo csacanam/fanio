@@ -103,7 +103,7 @@ export const useContribution = (campaignId: number = 0) => {
       // If we get here, allowance was never confirmed
       console.log('Allowance never confirmed after all attempts');
       setApprovalPending(false);
-              throw new Error('Approval confirmed but blockchain is taking time to update. Please wait a moment.');
+      throw new Error('Approval confirmed but blockchain is taking time to update. Please wait a moment.');
     } catch (err: any) {
       console.error('Approval error:', err);
       
@@ -128,6 +128,40 @@ export const useContribution = (campaignId: number = 0) => {
       setApprovalPending(false); // Reset pending state on error
     } finally {
       setIsApproving(false);
+    }
+  };
+
+  // Function to check and update allowance state
+  const checkAllowanceState = async (userAddress: string, amount: string) => {
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const addresses = CONTRACTS[DEFAULT_NETWORK];
+      
+      const usdc = new ethers.Contract(
+        addresses.usdc,
+        USDC_ABI,
+        signer
+      );
+
+      const amountWei = ethers.parseUnits(amount, 6);
+      const currentAllowance = await usdc.allowance(userAddress, addresses.fundingManager);
+      const hasEnoughAllowance = currentAllowance >= amountWei;
+      
+      console.log('Allowance check:', {
+        current: ethers.formatUnits(currentAllowance, 6),
+        required: amount,
+        hasEnough: hasEnoughAllowance
+      });
+      
+      // Update the approved state based on current allowance
+      setIsApproved(hasEnoughAllowance);
+      
+      return hasEnoughAllowance;
+    } catch (error) {
+      console.error('Error checking allowance state:', error);
+      setIsApproved(false);
+      return false;
     }
   };
 
@@ -161,12 +195,9 @@ export const useContribution = (campaignId: number = 0) => {
       // Convert amount to wei (USDC has 6 decimals)
       const amountWei = ethers.parseUnits(amount, 6);
 
-      // Check current allowance
-      const currentAllowance = await usdc.allowance(userAddress, addresses.fundingManager);
-      console.log('Current allowance:', ethers.formatUnits(currentAllowance, 6), 'USDC');
-      
-      // Verify we have sufficient allowance
-      if (currentAllowance < amountWei) {
+      // Check current allowance and update state
+      const hasEnoughAllowance = await checkAllowanceState(userAddress, amount);
+      if (!hasEnoughAllowance) {
         throw new Error('Insufficient USDC allowance. Please approve USDC spend first.');
       }
 
@@ -278,9 +309,21 @@ export const useContribution = (campaignId: number = 0) => {
     setSuccess(null);
   };
 
+  // Function to check allowance when amount changes
+  const checkAllowanceForAmount = async (amount: string, userAddress: string) => {
+    if (!amount || parseFloat(amount) <= 0 || !userAddress) return;
+    
+    try {
+      await checkAllowanceState(userAddress, amount);
+    } catch (error) {
+      console.error('Error checking allowance for amount:', error);
+    }
+  };
+
   return {
     contribute,
     approveUSDC,
+    checkAllowanceForAmount,
     isApproving,
     isContributing,
     isApproved,
