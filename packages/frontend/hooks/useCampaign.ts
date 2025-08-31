@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { CONTRACTS, DEFAULT_NETWORK } from '@/config/contracts';
+import { useHydration } from './useHydration';
 
 // ABI for FundingManager contract (simplified for what we need)
 const FUNDING_MANAGER_ABI = [
@@ -42,6 +43,7 @@ export interface CampaignData {
 }
 
 export const useCampaign = (campaignId: number = 0) => {
+  const isHydrated = useHydration();
   const [campaignData, setCampaignData] = useState<CampaignData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -148,8 +150,10 @@ export const useCampaign = (campaignId: number = 0) => {
   };
 
   useEffect(() => {
-    fetchCampaignData();
-  }, [campaignId]);
+    if (isHydrated && campaignId !== undefined) {
+      fetchCampaignData();
+    }
+  }, [isHydrated, campaignId]);
 
   return {
     campaignData,

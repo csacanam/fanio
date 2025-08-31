@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useCampaign } from "@/hooks/useCampaign"
 import { useContribution } from "@/hooks/useContribution"
 import { useWallet } from "@/hooks/useWallet"
+import { useTokenBalances } from "@/hooks/useTokenBalances"
 import { SuccessDialog } from "@/components/ui/success-dialog"
 import { ErrorDialog } from "@/components/ui/error-dialog"
 import { TradingModal } from "@/components/ui/trading-modal"
@@ -59,6 +60,18 @@ export default function EventPage({ params }: EventPageProps) {
     disconnectWallet,
     switchToBaseSepolia 
   } = useWallet();
+
+  // Token balances for trading
+  const { 
+    usdcBalance, 
+    eventTokenBalance, 
+    usdcDecimals, 
+    eventTokenDecimals, 
+    eventTokenSymbol: balanceEventTokenSymbol,
+    loading: balancesLoading,
+    error: balancesError,
+    refreshBalances
+  } = useTokenBalances(address || undefined, campaignData?.eventToken);
   
   // Contribution functionality
   const { 
@@ -1181,20 +1194,22 @@ export default function EventPage({ params }: EventPageProps) {
       </footer>
       
       {/* Success Dialog */}
-      {successData && (
-        <SuccessDialog
-          isOpen={showSuccessDialog}
-          onClose={() => setShowSuccessDialog(false)}
-          title={successData.title}
-          message={successData.message}
-          transactionHash={successData.txHash}
-          onRefresh={() => {
-            setShowSuccessDialog(false);
-            // Data is already refreshed when dialog opened
-          }}
-          networkExplorer={explorerUrl}
-        />
-      )}
+      <ClientOnly>
+        {successData && (
+          <SuccessDialog
+            isOpen={showSuccessDialog}
+            onClose={() => setShowSuccessDialog(false)}
+            title={successData.title}
+            message={successData.message}
+            transactionHash={successData.txHash}
+            onRefresh={() => {
+              setShowSuccessDialog(false);
+              // Data is already refreshed when dialog opened
+            }}
+            networkExplorer={explorerUrl}
+          />
+        )}
+      </ClientOnly>
       
       {/* Debug: Show explorer URL */}
       {process.env.NODE_ENV === 'development' && (
@@ -1204,27 +1219,32 @@ export default function EventPage({ params }: EventPageProps) {
       )}
       
       {/* Error Dialog */}
-      {errorData && (
-        <ErrorDialog
-          isOpen={showErrorDialog}
-          onClose={() => setShowErrorDialog(false)}
-          title={errorData.title}
-          message={errorData.message}
-        />
-      )}
+      <ClientOnly>
+        {errorData && (
+          <ErrorDialog
+            isOpen={showErrorDialog}
+            onClose={() => setShowErrorDialog(false)}
+            title={errorData.title}
+            message={errorData.message}
+          />
+        )}
+      </ClientOnly>
 
       {/* Trading Modal */}
-      <TradingModal
-        isOpen={showTradingModal}
-        onClose={() => setShowTradingModal(false)}
-        tokenSymbol={campaignData?.tokenSymbol || 'EVENT'}
-        currentPrice={1.00} // TODO: Get real price from contract
-        onBuy={handleBuyTokens}
-        onSell={handleSellTokens}
-        userBalance={1000} // TODO: Get real balance from contract
-        isLoading={false}
-        initialMode={tradingMode}
-      />
+      <ClientOnly>
+        <TradingModal
+          isOpen={showTradingModal}
+          onClose={() => setShowTradingModal(false)}
+          tokenSymbol={balanceEventTokenSymbol || campaignData?.tokenSymbol || 'EVENT'}
+          currentPrice={1.00} // TODO: Get real price from contract
+          onBuy={handleBuyTokens}
+          onSell={handleSellTokens}
+          usdcBalance={parseFloat(usdcBalance)}
+          eventTokenBalance={parseFloat(eventTokenBalance)}
+          isLoading={balancesLoading}
+          initialMode={tradingMode}
+        />
+      </ClientOnly>
     </div>
   )
 }
