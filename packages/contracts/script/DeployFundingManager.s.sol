@@ -29,9 +29,15 @@ contract DeployFundingManager is Script {
             fundingToken = address(mockUSDC);
             protocolWallet = deployer; // Use deployer as protocol wallet for local testing
 
+            // For local deployment, use a mock PoolManager address
+            // In real usage, this would be the actual PoolManager
+            address poolManager = address(0x123); // Mock address for local testing
+
             FundingManager fundingManager = new FundingManager(
                 fundingToken,
-                protocolWallet
+                protocolWallet,
+                poolManager,
+                address(0) // No hook for now
             );
 
             vm.stopBroadcast();
@@ -47,9 +53,14 @@ contract DeployFundingManager is Script {
 
             vm.startBroadcast(deployerPrivateKey);
 
+            // Base Sepolia PoolManager address
+            address poolManager = 0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408;
+
             FundingManager fundingManager = new FundingManager(
                 fundingToken,
-                protocolWallet
+                protocolWallet,
+                poolManager,
+                address(0) // No hook for now
             );
 
             vm.stopBroadcast();

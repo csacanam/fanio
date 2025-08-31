@@ -5,8 +5,9 @@ import {Test} from "forge-std/Test.sol";
 import {FundingManager} from "../src/FundingManager.sol";
 import {EventToken} from "../src/EventToken.sol";
 import {MockERC20} from "v4-periphery/lib/v4-core/lib/solmate/src/test/utils/mocks/MockERC20.sol";
+import {Deployers} from "@uniswap/v4-core/test/utils/Deployers.sol";
 
-contract FundingManagerTest is Test {
+contract FundingManagerTest is Test, Deployers {
     FundingManager public fundingManager;
     MockERC20 public mockUSDC;
 
@@ -24,8 +25,16 @@ contract FundingManagerTest is Test {
         // Deploy MockUSDC with 6 decimals (like real USDC)
         mockUSDC = new MockERC20("Mock USDC", "USDC", 6);
 
-        // Deploy FundingManager
-        fundingManager = new FundingManager(address(mockUSDC), protocolWallet);
+        // Deploy PoolManager and routers first
+        deployFreshManagerAndRouters();
+
+        // Deploy FundingManager with real PoolManager
+        fundingManager = new FundingManager(
+            address(mockUSDC),
+            protocolWallet,
+            address(manager),
+            address(0) // No hook for testing
+        );
 
         // Give USDC to organizer and contributors
         mockUSDC.mint(organizer, TARGET_AMOUNT);
