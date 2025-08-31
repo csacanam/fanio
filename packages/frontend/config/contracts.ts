@@ -1,5 +1,5 @@
 // Auto-generated contract configuration
-// Updated on: 2025-08-31T11:23:50.726Z
+// Updated on: 2025-08-31T12:20:02.222Z
 // Network: Base Sepolia
 
 export const CONTRACTS = {
@@ -8,7 +8,7 @@ export const CONTRACTS = {
     usdc: "0x0000000000000000000000000000000000000000" // Placeholder for local
   },
   baseSepolia: {
-    fundingManager: "0x392286b5fa09257f356080c9edbc70212d527776",
+    fundingManager: "0xd0c878aa24ee22bc38298eb791d504eb9d8fdbd6",
     usdc: "0x7de9a0c146Cc6A92F2592C5E4e2331B263De88B1"
   }
 } as const;

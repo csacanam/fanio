@@ -1236,7 +1236,7 @@ export default function EventPage({ params }: EventPageProps) {
           isOpen={showTradingModal}
           onClose={() => setShowTradingModal(false)}
           tokenSymbol={balanceEventTokenSymbol || campaignData?.tokenSymbol || 'EVENT'}
-          currentPrice={1.00} // TODO: Get real price from contract
+          currentPrice={1.20} // TODO: Get real price from contract
           onBuy={handleBuyTokens}
           onSell={handleSellTokens}
           usdcBalance={parseFloat(usdcBalance)}
