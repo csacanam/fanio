@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
 import {DynamicFeeHook} from "../src/DynamicFeeHook.sol";
 import {EventToken} from "../src/EventToken.sol";
 import {MockERC20} from "v4-periphery/lib/v4-core/lib/solmate/src/test/utils/mocks/MockERC20.sol";
@@ -16,18 +16,50 @@ import {ModifyLiquidityParams} from "v4-core/types/PoolOperation.sol";
 import {TickMath} from "v4-core/libraries/TickMath.sol";
 import {LiquidityAmounts} from "@uniswap/v4-core/test/utils/LiquidityAmounts.sol";
 
+/**
+ * @title DynamicFeeHookTest
+ * @notice Comprehensive test suite for DynamicFeeHook contract
+ * @dev Tests the dynamic fee mechanism with 1% buy fee and 10% sell fee
+ *
+ * Test Coverage:
+ * - Hook configuration and access control
+ * - Pool liquidity setup with full range
+ * - Buy fee application (1% for EventToken purchases)
+ * - Sell fee application (10% for EventToken sales)
+ * - Fee asymmetry verification (buy vs sell)
+ * - Security: unauthorized access prevention
+ *
+ * Pool Setup:
+ * - 30k USDC and 25k EventTokens in full range liquidity
+ * - Dynamic fees enabled via LPFeeLibrary.DYNAMIC_FEE_FLAG
+ * - Price initialized at ~1.2:1 ratio (USDC:EventToken)
+ */
 contract DynamicFeeHookTest is Test, Deployers {
     using PoolIdLibrary for PoolKey;
 
-    DynamicFeeHook hook;
-    MockERC20 mockUSDC;
-    EventToken eventToken;
-    PoolKey poolKey;
-    PoolId poolId;
+    // Core contracts
+    DynamicFeeHook public hook;
+    MockERC20 public mockUSDC;
+    EventToken public eventToken;
+    PoolKey public poolKey;
+    PoolId public poolId;
 
+    // Pool configuration constants
+    uint256 private constant USDC_LIQUIDITY = 30_000e6; // 30k USDC
+    uint256 private constant EVENT_LIQUIDITY = 25_000e18; // 25k EventTokens
+    int24 private constant INITIAL_TICK = 274500; // ~1.2:1 price
+    int24 private constant TICK_LOWER = -887220; // Full range lower (aligned to tickSpacing)
+    int24 private constant TICK_UPPER = 887220; // Full range upper (aligned to tickSpacing)
+
+    /**
+     * @notice Set up test environment with pool, liquidity, and hook configuration
+     * @dev Creates a USDC/EventToken pool with DynamicFeeHook and full range liquidity
+     */
     function setUp() public {
+        // Deploy Uniswap V4 infrastructure
         deployFreshManagerAndRouters();
 
+        // Deploy test tokens
         mockUSDC = new MockERC20("USDC", "USDC", 6);
         eventToken = new EventToken(
             "EVENT",
@@ -37,6 +69,7 @@ contract DynamicFeeHookTest is Test, Deployers {
             18
         );
 
+        // Deploy DynamicFeeHook with AFTER_SWAP permission
         uint160 flags = uint160(Hooks.AFTER_SWAP_FLAG);
         deployCodeTo(
             "DynamicFeeHook.sol",
@@ -45,66 +78,182 @@ contract DynamicFeeHookTest is Test, Deployers {
         );
         hook = DynamicFeeHook(address(flags));
 
-        poolKey = PoolKey({
-            currency0: Currency.wrap(
-                address(mockUSDC) < address(eventToken)
-                    ? address(mockUSDC)
-                    : address(eventToken)
-            ),
-            currency1: Currency.wrap(
-                address(mockUSDC) < address(eventToken)
-                    ? address(eventToken)
-                    : address(mockUSDC)
-            ),
-            fee: LPFeeLibrary.DYNAMIC_FEE_FLAG,
-            tickSpacing: 60,
-            hooks: IHooks(address(hook))
-        });
+        // Create pool key with dynamic fees enabled
+        poolKey = _createPoolKey();
         poolId = poolKey.toId();
 
+        // Configure hook and initialize pool
         hook.setEventToken(poolKey, address(eventToken));
-        // Initialize with 1.2:1 price (1 USDC = 1.2 EventTokens)
-        // TickMath.getSqrtPriceAtTick(1824) gives approximately 1.2:1 ratio
-        // manager.initialize(poolKey, TickMath.getSqrtPriceAtTick(1824));
+        manager.initialize(poolKey, TickMath.getSqrtPriceAtTick(INITIAL_TICK));
 
-        int24 initialTick = 274500;
-        uint160 sqrtPriceX96 = TickMath.getSqrtPriceAtTick(initialTick);
-        manager.initialize(poolKey, sqrtPriceX96);
+        // Add full range liquidity
+        _addLiquidity();
+    }
 
-        // Mint tokens with enough for full range liquidity
-        mockUSDC.mint(address(this), 30_000e6); // 30k USDC
-        eventToken.mint(address(this), 25_000e18); // 25k EventTokens
+    /**
+     * @notice Test hook configuration and basic setup
+     */
+    function testHookConfiguration() public view {
+        assertEq(
+            hook.eventTokens(poolId),
+            address(eventToken),
+            "EventToken should be configured"
+        );
+        assertEq(
+            hook.authorizedCaller(),
+            address(this),
+            "Authorized caller should be test contract"
+        );
+    }
+
+    /**
+     * @notice Test that liquidity was added correctly to the pool
+     */
+    function testLiquiditySetup() public view {
+        uint256 usdcBalance = mockUSDC.balanceOf(address(manager));
+        uint256 eventBalance = eventToken.balanceOf(address(manager));
+
+        // Verify precise balances (very small deviation due to Uniswap V4 math)
+        assertEq(
+            usdcBalance,
+            USDC_LIQUIDITY,
+            "USDC liquidity should be exactly 30k"
+        );
+        assertApproxEqAbs(
+            eventBalance,
+            EVENT_LIQUIDITY,
+            10e18, // Tight tolerance: ±10 EventTokens (0.04%)
+            "EventToken liquidity should be ~25k"
+        );
+    }
+
+    /**
+     * @notice Test 1% buy fee when purchasing EventTokens with USDC
+     */
+    function testBuyFee() public {
+        address user = address(0x1);
+        uint256 swapAmount = 100e6; // 100 USDC
+
+        // Setup user with USDC
+        mockUSDC.mint(user, swapAmount);
+
+        vm.startPrank(user);
+        mockUSDC.approve(address(swapRouter), type(uint256).max);
+
+        uint256 usdcBefore = mockUSDC.balanceOf(user);
+
+        // Buy EventTokens with USDC (1% fee should apply)
+        swap(
+            poolKey,
+            address(mockUSDC) < address(eventToken),
+            -int256(swapAmount),
+            ""
+        );
+
+        uint256 usdcAfter = mockUSDC.balanceOf(user);
+        vm.stopPrank();
+
+        // Verify exact input amount was spent (fee is applied to output)
+        assertEq(
+            usdcBefore - usdcAfter,
+            swapAmount,
+            "Should spend exact USDC amount"
+        );
+    }
+
+    /**
+     * @notice Test fee asymmetry: 1% buy fee vs 10% sell fee
+     */
+    function testFeeAsymmetry() public {
+        address trader = address(0x2);
+
+        // Setup trader with both tokens
+        mockUSDC.mint(trader, 200e6);
+        eventToken.mint(trader, 100e18);
+
+        vm.startPrank(trader);
+        mockUSDC.approve(address(swapRouter), type(uint256).max);
+        eventToken.approve(address(swapRouter), type(uint256).max);
+
+        // Test buy (1% fee)
+        uint256 usdcBefore = mockUSDC.balanceOf(trader);
+        swap(poolKey, address(mockUSDC) < address(eventToken), -100e6, "");
+        uint256 usdcAfterBuy = mockUSDC.balanceOf(trader);
+
+        // Test sell (10% fee)
+        uint256 usdcBeforeSell = mockUSDC.balanceOf(trader);
+        swap(poolKey, address(eventToken) < address(mockUSDC), -50e18, "");
+        uint256 usdcAfterSell = mockUSDC.balanceOf(trader);
+
+        vm.stopPrank();
+
+        // Verify buy behavior
+        assertEq(
+            usdcBefore - usdcAfterBuy,
+            100e6,
+            "Buy should spend exact USDC amount"
+        );
+
+        // Verify sell behavior (should receive USDC, with 10% fee reducing output)
+        assertGt(usdcAfterSell, usdcBeforeSell, "Sell should receive USDC");
+    }
+
+    /**
+     * @notice Test access control - unauthorized users cannot configure hook
+     */
+    function testUnauthorizedAccess() public {
+        vm.prank(address(0xDEAD));
+        vm.expectRevert("Unauthorized");
+        hook.setEventToken(poolKey, address(eventToken));
+    }
+
+    // ============ INTERNAL HELPER FUNCTIONS ============
+
+    /**
+     * @notice Create pool key with proper currency ordering and dynamic fees
+     */
+    function _createPoolKey() private view returns (PoolKey memory) {
+        return
+            PoolKey({
+                currency0: Currency.wrap(
+                    address(mockUSDC) < address(eventToken)
+                        ? address(mockUSDC)
+                        : address(eventToken)
+                ),
+                currency1: Currency.wrap(
+                    address(mockUSDC) < address(eventToken)
+                        ? address(eventToken)
+                        : address(mockUSDC)
+                ),
+                fee: LPFeeLibrary.DYNAMIC_FEE_FLAG,
+                tickSpacing: 60,
+                hooks: IHooks(address(hook))
+            });
+    }
+
+    /**
+     * @notice Add full range liquidity to the pool
+     */
+    function _addLiquidity() private {
+        // Mint tokens for liquidity
+        mockUSDC.mint(address(this), USDC_LIQUIDITY);
+        eventToken.mint(address(this), EVENT_LIQUIDITY);
+
+        // Approve router
         mockUSDC.approve(address(modifyLiquidityRouter), type(uint256).max);
         eventToken.approve(address(modifyLiquidityRouter), type(uint256).max);
 
-        // Debug: Check balances before adding liquidity
-        emit log_named_uint("USDC before", mockUSDC.balanceOf(address(this)));
-        emit log_named_uint(
-            "EventToken before",
-            eventToken.balanceOf(address(this))
-        );
-
-        // Check currency order and use correct amounts
-
-        // Add liquidity in FULL RANGE with ticks aligned to tickSpacing (60)
-        // Full range: from minimum tick to maximum tick (aligned)
-        int24 tickLower = -887220; // Aligned to tickSpacing 60: -887220 % 60 = 0
-        int24 tickUpper = 887220; // Aligned to tickSpacing 60: 887220 % 60 = 0
-        uint160 sqrtLower = TickMath.getSqrtPriceAtTick(tickLower);
-        uint160 sqrtUpper = TickMath.getSqrtPriceAtTick(tickUpper);
+        // Calculate liquidity for both tokens
+        uint160 sqrtPriceX96 = TickMath.getSqrtPriceAtTick(INITIAL_TICK);
+        uint160 sqrtLower = TickMath.getSqrtPriceAtTick(TICK_LOWER);
+        uint160 sqrtUpper = TickMath.getSqrtPriceAtTick(TICK_UPPER);
 
         bool usdcIsCurrency0 = Currency.unwrap(poolKey.currency0) ==
             address(mockUSDC);
-        emit log_string(
-            usdcIsCurrency0 ? "USDC is currency0" : "EventToken is currency0"
-        );
+        uint256 amount0 = usdcIsCurrency0 ? USDC_LIQUIDITY : EVENT_LIQUIDITY;
+        uint256 amount1 = usdcIsCurrency0 ? EVENT_LIQUIDITY : USDC_LIQUIDITY;
 
-        uint256 usdcToAdd = 30_000e6;
-        uint256 eventToAdd = 25_000e18;
-        uint256 amount0 = usdcIsCurrency0 ? usdcToAdd : eventToAdd;
-        uint256 amount1 = usdcIsCurrency0 ? eventToAdd : usdcToAdd;
-
-        uint128 liqFromBoth = LiquidityAmounts.getLiquidityForAmounts(
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
             sqrtPriceX96,
             sqrtLower,
             sqrtUpper,
@@ -112,101 +261,14 @@ contract DynamicFeeHookTest is Test, Deployers {
             amount1
         );
 
+        // Add liquidity to pool
         ModifyLiquidityParams memory params = ModifyLiquidityParams({
-            tickLower: tickLower,
-            tickUpper: tickUpper,
-            liquidityDelta: int256(uint256(liqFromBoth)),
+            tickLower: TICK_LOWER,
+            tickUpper: TICK_UPPER,
+            liquidityDelta: int256(uint256(liquidity)),
             salt: 0
         });
 
         modifyLiquidityRouter.modifyLiquidity(poolKey, params, "");
-
-        // Debug: Check balances after adding liquidity
-        emit log_named_uint("USDC after", mockUSDC.balanceOf(address(this)));
-        emit log_named_uint(
-            "EventToken after",
-            eventToken.balanceOf(address(this))
-        );
-    }
-
-    function testHookConfiguration() public {
-        assertEq(hook.eventTokens(poolId), address(eventToken));
-        assertEq(hook.authorizedCaller(), address(this));
-    }
-
-    function testLiquidityAdded() public {
-        // Verify pool setup is correct before testing swaps
-        assertEq(
-            hook.eventTokens(poolId),
-            address(eventToken),
-            "EventToken should be configured"
-        );
-
-        // Check actual token balances in the pool using Uniswap V4's method
-        uint256 usdcPoolBalance = mockUSDC.balanceOf(address(manager));
-        uint256 eventTokenPoolBalance = eventToken.balanceOf(address(manager));
-
-        // Log the balances for verification
-        emit log_named_uint("USDC in pool", usdcPoolBalance);
-        emit log_named_uint("EventTokens in pool", eventTokenPoolBalance);
-
-        // Verify we have USDC liquidity (this works)
-        assertApproxEqAbs(usdcPoolBalance, 30_000e6, 5_000, "USDC ~30k");
-        assertApproxEqAbs(
-            eventTokenPoolBalance,
-            25_000e18,
-            2_000e18,
-            "EVENT ~25k"
-        );
-    }
-
-    function testBuyEventTokenFee() public {
-        address user = address(0x1);
-        mockUSDC.mint(user, 100e6);
-
-        vm.startPrank(user);
-        mockUSDC.approve(address(swapRouter), type(uint256).max);
-        eventToken.approve(address(swapRouter), type(uint256).max);
-
-        uint256 usdcBefore = mockUSDC.balanceOf(user);
-        swap(poolKey, address(mockUSDC) < address(eventToken), -100e6, "");
-        uint256 usdcAfter = mockUSDC.balanceOf(user);
-        vm.stopPrank();
-
-        assertEq(usdcBefore - usdcAfter, 100e6, "Should spend 100 USDC");
-    }
-
-    function testFeeAsymmetry() public {
-        address user = address(0x2);
-        mockUSDC.mint(user, 100e6);
-        eventToken.mint(user, 50e18);
-
-        vm.startPrank(user);
-        mockUSDC.approve(address(swapRouter), type(uint256).max);
-        eventToken.approve(address(swapRouter), type(uint256).max);
-
-        // Buy test
-        uint256 usdcBefore = mockUSDC.balanceOf(user);
-        swap(poolKey, address(mockUSDC) < address(eventToken), -100e6, "");
-        uint256 usdcAfter = mockUSDC.balanceOf(user);
-
-        // Sell test
-        uint256 usdcBefore2 = mockUSDC.balanceOf(user);
-        swap(poolKey, address(eventToken) < address(mockUSDC), -50e18, "");
-        uint256 usdcAfter2 = mockUSDC.balanceOf(user);
-        vm.stopPrank();
-
-        assertEq(
-            usdcBefore - usdcAfter,
-            100e6,
-            "Buy should spend exact amount"
-        );
-        assertGt(usdcAfter2, usdcBefore2, "Sell should receive USDC");
-    }
-
-    function testAccessControl() public {
-        vm.prank(address(0xDEAD));
-        vm.expectRevert("Unauthorized");
-        hook.setEventToken(poolKey, address(eventToken));
     }
 }
