@@ -149,13 +149,13 @@ contract FundingManagerTest is Test, Deployers {
         );
         vm.stopPrank();
 
-        // Get EventToken address from campaign and update the hook
+        // Get EventToken address from campaign
         address eventTokenAddr = fundingManager.getCampaignEventToken(
             campaignId
         );
-        hook.setEventToken(eventTokenAddr);
-        hook.setFundingToken(address(mockUSDC));
         EventToken eventToken = EventToken(eventTokenAddr);
+
+        // No configuration needed - hook will auto-detect from balances
 
         // Record initial balances
         uint256 organizerInitialBalance = mockUSDC.balanceOf(organizer);
