@@ -12,10 +12,6 @@ import {IHooks} from "v4-core/interfaces/IHooks.sol";
 import {PoolKey} from "v4-core/types/PoolKey.sol";
 import {Currency, CurrencyLibrary} from "v4-core/types/Currency.sol";
 import {TickMath} from "v4-core/libraries/TickMath.sol";
-import {LiquidityAmounts} from "v4-periphery/src/libraries/LiquidityAmounts.sol";
-import {BalanceDelta} from "v4-core/types/BalanceDelta.sol";
-import {ModifyLiquidityParams} from "v4-core/types/PoolOperation.sol";
-
 
 /**
  * @title FundingManager
@@ -53,7 +49,7 @@ contract FundingManager is ReentrancyGuard {
     IPoolManager public immutable poolManager;
 
     /// @notice Fanio trading hook contract
-    address public fanioHook;
+    // address public fanioHook; // TODO: Hook variable temporarily disabled for demo
 
     // ========================================
     // DATA STRUCTURES
@@ -223,8 +219,8 @@ contract FundingManager is ReentrancyGuard {
     constructor(
         address defaultFundingToken,
         address protocolWallet,
-        address _poolManager,
-        address _fanioHook
+        address _poolManager
+        // address _fanioHook // TODO: Hook parameter temporarily disabled for demo
     ) {
         require(defaultFundingToken != address(0), "Invalid funding token");
         require(protocolWallet != address(0), "Invalid protocol wallet");
@@ -233,7 +229,7 @@ contract FundingManager is ReentrancyGuard {
         DEFAULT_FUNDING_TOKEN = IERC20(defaultFundingToken);
         PROTOCOL_WALLET = protocolWallet;
         poolManager = IPoolManager(_poolManager);
-        fanioHook = _fanioHook;
+        // fanioHook = _fanioHook; // TODO: Hook assignment temporarily disabled for demo
     }
 
     // ========================================
@@ -513,109 +509,25 @@ contract FundingManager is ReentrancyGuard {
 
         emit CampaignFunded(campaignId, campaign.raisedAmount);
 
-        // TODO: Create Uniswap V4 pool with automatic liquidity
-        // Calculate amounts for initial liquidity
-        // uint256 fundingAmount = (campaign.raisedAmount * 30) / 100; // 30% of raised
-        // uint256 tokenAmount = IERC20(campaign.eventToken).balanceOf(address(this)); // poolTokens already minted
-        
-        // _createTradingPool(campaignId, fundingAmount, tokenAmount);
-        // TODO: Implement proper lock pattern for Uniswap V4
+        // TODO: Hook functionality temporarily disabled for demo
+        // Transfer tokens to hook for pool creation
+        // if (fanioHook != address(0)) {
+        //     uint256 fundingAmount = (campaign.targetAmount * 30) / 100; // 30% of target
+        //     uint256 tokenAmount = IERC20(campaign.eventToken).balanceOf(address(this)); // poolTokens already minted
+            
+        //     _transferTokensToHook(campaignId, fundingAmount, tokenAmount);
+            
+        //     // TODO: Hook pool initialization temporarily disabled for demo
+        //     // _initializeHookPool(campaignId, fundingAmount, tokenAmount);
+        // }
     }
 
     // ========================================
     // UNISWAP V4 POOL CREATION
     // ========================================
 
-    /**
-     * @dev Create Uniswap V4 trading pool for the funded campaign
-     * @param campaignId ID of the funded campaign
-     * @param fundingAmount Amount of funding tokens for initial liquidity
-     * @param tokenAmount Amount of event tokens for initial liquidity
-     */
-    function _createTradingPool(
-        uint256 campaignId,
-        uint256 fundingAmount,
-        uint256 tokenAmount
-    ) internal {
-        EventCampaign storage campaign = campaigns[campaignId];
-
-        // Get the actual token addresses
-        address fundingTokenAddr = campaign.fundingToken != address(0)
-            ? campaign.fundingToken
-            : address(DEFAULT_FUNDING_TOKEN);
-        address eventTokenAddr = campaign.eventToken;
-
-        // Uniswap v4 orders currencies by address (lexicographic order)
-        // currency0 = lower address, currency1 = higher address
-        (address token0, address token1) = fundingTokenAddr < eventTokenAddr
-            ? (fundingTokenAddr, eventTokenAddr)
-            : (eventTokenAddr, fundingTokenAddr);
-
-        // 1. Create PoolKey with correct currency order
-        PoolKey memory key = PoolKey({
-            currency0: Currency.wrap(token0),
-            currency1: Currency.wrap(token1),
-            fee: 3000, // 0.3% fee
-            tickSpacing: 60,
-            hooks: IHooks(address(fanioHook))
-        });
-
-        // 2. Initialize the pool (this will trigger the hook)
-        // We want initial price: 1.2 funding tokens per 1 event token
-        // This gives early backers a 20% appreciation
-        int24 tick = 1824; // log(1.2) / log(1.0001) ≈ 1824
-
-        // Calculate sqrtPriceX96 for the initial tick
-        uint160 sqrtPriceX96 = TickMath.getSqrtPriceAtTick(tick);
-
-        // 2. Initialize the pool (this will trigger the hook)
-        poolManager.initialize(key, sqrtPriceX96);
-
-        // 3. Add initial liquidity to the pool
-        // Pass the currency order to avoid recalculation
-        bool isFundingToken0 = fundingTokenAddr < eventTokenAddr;
-        _addLiquidityToPool(key, fundingAmount, tokenAmount, campaignId, isFundingToken0);
-    }
-
-    /**
-     * @dev Add liquidity directly to the Uniswap V4 pool
-     * @param key PoolKey for the trading pool
-     * @param fundingAmount Amount of funding tokens
-     * @param tokenAmount Amount of event tokens
-     * @param campaignId ID of the campaign
-     */
-    function _addLiquidityToPool(
-        PoolKey memory key,
-        uint256 fundingAmount,
-        uint256 tokenAmount,
-        uint256 campaignId,
-        bool isFundingToken0
-    ) internal {                
-        // Calculate liquidity for full range
-        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
-            TickMath.getSqrtPriceAtTick(1824), // Initial price: 1.2:1
-            TickMath.getSqrtPriceAtTick(-887220), // Full range lower
-            TickMath.getSqrtPriceAtTick(887220),  // Full range upper
-            isFundingToken0 ? fundingAmount : tokenAmount,
-            isFundingToken0 ? tokenAmount : fundingAmount
-        );
-        
-        // Add liquidity to the pool
-        poolManager.modifyLiquidity(
-            key,
-            ModifyLiquidityParams({
-                tickLower: -887220,
-                tickUpper: 887220,
-                liquidityDelta: int256(uint256(liquidity)),
-                salt: 0
-            }),
-            ""
-        );
-
-        
-        // Emit event for initial liquidity added
-        emit InitialLiquidityAdded(campaignId, fundingAmount, tokenAmount);
-    }
+    // Pool creation is now handled by the hook in afterInitialize
+    // This section has been simplified to just transfer tokens and initialize pool
 
     /**
      * @dev Close an expired campaign that didn't reach its funding goal
@@ -837,6 +749,66 @@ contract FundingManager is ReentrancyGuard {
     }
 
     /**
+     * @dev Transfer tokens to hook for pool creation
+     * @param campaignId ID of the campaign
+     * @param fundingAmount Amount of funding tokens
+     * @param tokenAmount Amount of event tokens
+     * 
+     * @notice TEMPORARILY DISABLED FOR DEMO - Hook not yet functional
+     */
+    function _transferTokensToHook(
+        uint256 campaignId,
+        uint256 fundingAmount,
+        uint256 tokenAmount
+    ) internal {
+        // TODO: Hook token transfer temporarily disabled for demo
+        // EventCampaign storage campaign = campaigns[campaignId];
+        
+        // // Transfer funding tokens to hook
+        // IERC20(campaign.fundingToken).transfer(fanioHook, fundingAmount);
+        
+        // // Transfer event tokens to hook
+        // IERC20(campaign.eventToken).transfer(fanioHook, tokenAmount);
+        
+        // // Emit event
+        // emit TokensTransferredToHook(campaignId, fanioHook, fundingAmount, tokenAmount);
+    }
+
+    /**
+     * @dev Initialize hook pool and add initial liquidity
+     * @param campaignId ID of the campaign
+     * @param fundingAmount Amount of funding tokens
+     * @param tokenAmount Amount of event tokens
+     * 
+     * @notice TEMPORARILY DISABLED FOR DEMO - Hook not yet functional
+     */
+    function _initializeHookPool(
+        uint256 campaignId,
+        uint256 fundingAmount,
+        uint256 tokenAmount
+    ) internal {
+        // TODO: Hook pool initialization temporarily disabled for demo
+        // EventCampaign storage campaign = campaigns[campaignId];
+        
+        // // Create PoolKey for the trading pool
+        // PoolKey memory key = PoolKey({
+        //     currency0: Currency.wrap(campaign.fundingToken < campaign.eventToken ? 
+        //         campaign.fundingToken : campaign.eventToken),
+        //     currency1: Currency.wrap(campaign.fundingToken < campaign.eventToken ? 
+        //         campaign.eventToken : campaign.fundingToken),
+        //     fee: 3000, // 0.3% fee
+        //     tickSpacing: 60,
+        //     hooks: IHooks(fanioHook)
+        // });
+
+        // // Initialize the pool (this will trigger the hook's afterInitialize)
+        // uint160 sqrtPriceX96 = TickMath.getSqrtPriceAtTick(1824); // 1.2:1 price
+        // poolManager.initialize(key, sqrtPriceX96);
+        
+        // emit PoolInitialized(campaignId, address(poolManager), key);
+    }
+
+    /**
      * @dev Convert funding token units to event token units
      *
      * @param amount Amount in funding token units
@@ -873,16 +845,32 @@ contract FundingManager is ReentrancyGuard {
 // EVENTS
 // ========================================
 
+// Event removed - liquidity is now handled by the hook
+
 /**
- * @dev Emitted when initial liquidity is added to a trading pool
+ * @dev Emitted when tokens are transferred to hook for pool creation
  * @param campaignId ID of the campaign
- * @param fundingAmount Amount of funding tokens added
- * @param tokenAmount Amount of event tokens added
+ * @param hook Address of the hook
+ * @param fundingAmount Amount of funding tokens transferred
+ * @param tokenAmount Amount of event tokens transferred
  */
-event InitialLiquidityAdded(
+event TokensTransferredToHook(
     uint256 indexed campaignId,
+    address indexed hook,
     uint256 fundingAmount,
     uint256 tokenAmount
+);
+
+/**
+ * @dev Emitted when pool is initialized
+ * @param campaignId ID of the campaign
+ * @param poolManager Address of the pool manager
+ * @param key Pool key information
+ */
+event PoolInitialized(
+    uint256 indexed campaignId,
+    address indexed poolManager,
+    PoolKey key
 );
 
 // ========================================

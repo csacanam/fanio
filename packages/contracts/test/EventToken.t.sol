@@ -31,8 +31,8 @@ contract EventTokenTest is Test, Deployers {
         fundingManager = new FundingManager(
             address(mockUSDC),
             mockProtocolWallet,
-            address(manager),
-            address(0) // No hook for testing
+            address(manager)
+            // address(0) // TODO: Hook parameter temporarily disabled for demo
         );
 
         // Deploy EventToken with campaign info

@@ -11,7 +11,7 @@ contract ContributeToCampaign is Script {
     function run() external {
         // Configuration - modify these values as needed
         uint256 campaignId = 0; // Campaign to contribute to
-        uint256 contributionAmount = 5e6; // 5 USDC (5,000,000 wei)
+        uint256 contributionAmount = 1e6; // 1 USDC (1,000,000 wei)
 
         // Get configuration based on network
         Config config = new Config();

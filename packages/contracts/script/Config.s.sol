@@ -12,7 +12,7 @@ contract Config is Script {
         pure
         returns (address fundingToken, address protocolWallet)
     {
-        fundingToken = address(0x7de9a0c146Cc6A92F2592C5E4e2331B263De88B1); // USDC on Base Sepolia
+        fundingToken = address(0x036CbD53842c5426634e7929541eC2318f3dCF7e); // USDC real on Base Sepolia
         protocolWallet = address(0x3F696921Df10037961aF3b757689FC383709b75d); // Update with your wallet
     }
 
@@ -33,7 +33,10 @@ contract Config is Script {
             return address(0);
         } else if (block.chainid == 84532) {
             // Base Sepolia - return the deployed address
-            return address(0x89dd97893d019bF026D494757497B8c82876cFDE);
+            return address(0x9df821771376a87c7e6d3a9F210C962B406722FF);
+        } else if (block.chainid == 8453) {
+            // Base Mainnet - return address(0) to indicate it needs to be deployed
+            return address(0);
         } else {
             // Unknown network
             revert("Unsupported network");

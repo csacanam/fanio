@@ -84,29 +84,37 @@ contract DynamicFeeHook is BaseHook {
     // IMMUTABLE STATE
     // ============================================================================
 
-    /// @notice FundingManager contract address
-    address public immutable fundingManager;
-
     /// @notice EventToken contract address
-    address public immutable eventToken;
+    address public eventToken;
 
     /// @notice Funding token contract address (can be USDC, USDT, etc.)
-    address public immutable fundingToken;
+    address public fundingToken;
 
     // ============================================================================
     // CUSTOM ERRORS
     // ============================================================================
 
     error OnlyFundingManager();
+    error EventTokenAlreadySet();
+    error FundingTokenAlreadySet();
 
     // ============================================================================
-    // MODIFIERS
+    // EVENTS
     // ============================================================================
 
-    modifier onlyFundingManager() {
-        if (msg.sender != fundingManager) revert OnlyFundingManager();
-        _;
-    }
+    /**
+     * @notice Emitted when initial liquidity is added to a pool
+     * @param key Pool key
+     * @param fundingAmount Amount of funding tokens added
+     * @param tokenAmount Amount of event tokens added
+     * @param liquidity Amount of liquidity added
+     */
+    event InitialLiquidityAdded(
+        PoolKey indexed key,
+        uint256 fundingAmount,
+        uint256 tokenAmount,
+        uint128 liquidity
+    );
 
     // ============================================================================
     // CONSTRUCTOR
@@ -114,11 +122,9 @@ contract DynamicFeeHook is BaseHook {
 
     constructor(
         IPoolManager _manager,
-        address _fundingManager,
         address _eventToken,
         address _fundingToken
     ) BaseHook(_manager) {
-        fundingManager = _fundingManager;
         eventToken = _eventToken;
         fundingToken = _fundingToken;
     }
@@ -136,7 +142,7 @@ contract DynamicFeeHook is BaseHook {
         return
             Hooks.Permissions({
                 beforeInitialize: false,
-                afterInitialize: false, // ❌ No automatic liquidity
+                afterInitialize: true, // ✅ For automatic liquidity
                 beforeAddLiquidity: false,
                 beforeRemoveLiquidity: false,
                 afterAddLiquidity: false,
@@ -155,6 +161,55 @@ contract DynamicFeeHook is BaseHook {
     // ============================================================================
     // HOOK FUNCTIONS
     // ============================================================================
+
+    /**
+     * @notice Update the event token address (can only be called once)
+     * @param _eventToken New event token address
+     */
+    function setEventToken(address _eventToken) external {
+        if (eventToken != address(0x456)) {
+            // Token already configured, cannot change
+            revert EventTokenAlreadySet();
+        }
+        eventToken = _eventToken;
+    }
+
+    /**
+     * @notice Update the funding token address (can only be called once)
+     * @param _fundingToken New funding token address
+     */
+    function setFundingToken(address _fundingToken) external {
+        if (fundingToken != address(0x456)) {
+            // Token already configured, cannot change
+            revert FundingTokenAlreadySet();
+        }
+        fundingToken = _fundingToken;
+    }
+
+    /**
+     * @notice Called after pool initialization - adds initial liquidity
+     * @dev Uses current balances to add full-range liquidity
+     */
+    function _afterInitialize(
+        address sender,
+        PoolKey calldata key,
+        uint160 sqrtPriceX96,
+        int24 tick
+    ) internal override returns (bytes4) {
+        // Verify this pool uses this hook
+        require(address(key.hooks) == address(this), "Wrong hook");
+
+        // Get current balances for liquidity
+        uint256 fundingBalance = IERC20(fundingToken).balanceOf(address(this));
+        uint256 tokenBalance = IERC20(eventToken).balanceOf(address(this));
+
+        // Only add liquidity if we have both tokens
+        if (fundingBalance > 0 && tokenBalance > 0) {
+            _addInitialLiquidity(key, fundingBalance, tokenBalance);
+        }
+
+        return IHooks.afterInitialize.selector;
+    }
 
     /**
      * @notice Called after swap - implements dynamic fees
@@ -205,5 +260,41 @@ contract DynamicFeeHook is BaseHook {
             // Sell: make it more expensive (positive adjustment)
             return 1000; // 0.1% more expensive
         }
+    }
+
+    /**
+     * @notice Add initial liquidity to the pool
+     * @param key Pool key
+     * @param fundingAmount Amount of funding tokens
+     * @param tokenAmount Amount of event tokens
+     */
+    function _addInitialLiquidity(
+        PoolKey memory key,
+        uint256 fundingAmount,
+        uint256 tokenAmount
+    ) internal {
+        // Calculate liquidity for full range
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
+            TickMath.getSqrtPriceAtTick(1824), // Initial price: 1.2:1
+            TickMath.getSqrtPriceAtTick(-887220), // Full range lower
+            TickMath.getSqrtPriceAtTick(887220), // Full range upper
+            fundingAmount,
+            tokenAmount
+        );
+
+        // Add liquidity to the pool
+        poolManager.modifyLiquidity(
+            key,
+            ModifyLiquidityParams({
+                tickLower: -887220,
+                tickUpper: 887220,
+                liquidityDelta: int256(uint256(liquidity)),
+                salt: 0
+            }),
+            ""
+        );
+
+        // Emit event for initial liquidity added
+        emit InitialLiquidityAdded(key, fundingAmount, tokenAmount, liquidity);
     }
 }

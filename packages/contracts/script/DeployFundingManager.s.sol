@@ -36,8 +36,8 @@ contract DeployFundingManager is Script {
             FundingManager fundingManager = new FundingManager(
                 fundingToken,
                 protocolWallet,
-                poolManager,
-                address(0) // No hook for now
+                poolManager
+                // address(0) // TODO: Hook parameter temporarily disabled for demo
             );
 
             vm.stopBroadcast();
@@ -47,8 +47,8 @@ contract DeployFundingManager is Script {
             console.log("MockUSDC deployed at:", address(mockUSDC));
             console.log("FundingManager deployed at:", address(fundingManager));
             console.log("Protocol Wallet:", protocolWallet);
-        } else {
-            // Network deployment: use Config.s.sol values
+        } else if (block.chainid == 84532) {
+            // Base Sepolia deployment: use Base Sepolia config
             (fundingToken, protocolWallet) = config.getBaseSepoliaConfig();
 
             vm.startBroadcast(deployerPrivateKey);
@@ -59,17 +59,19 @@ contract DeployFundingManager is Script {
             FundingManager fundingManager = new FundingManager(
                 fundingToken,
                 protocolWallet,
-                poolManager,
-                address(0) // No hook for now
+                poolManager
+                // address(0) // TODO: Hook parameter temporarily disabled for demo
             );
 
             vm.stopBroadcast();
 
             // Print deployment addresses (Foundry standard)
-            console.log("=== Network Deployment Complete ===");
+            console.log("=== Base Sepolia Deployment Complete ===");
             console.log("FundingManager deployed at:", address(fundingManager));
             console.log("Funding Token:", fundingToken);
             console.log("Protocol Wallet:", protocolWallet);
+        } else {
+            revert("Unsupported network");
         }
     }
 }
