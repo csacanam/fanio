@@ -36,16 +36,13 @@ contract FundingManagerTest is Test, Deployers {
         deployFreshManagerAndRouters();
 
         // Deploy DynamicFeeHook with proper flags using deployCodeTo
-        uint160 flags = uint160(
-            Hooks.AFTER_INITIALIZE_FLAG | Hooks.AFTER_SWAP_FLAG
-        );
+        uint160 flags = uint160(Hooks.AFTER_SWAP_FLAG);
         address hookAddress = address(uint160(flags));
         deployCodeTo(
             "DynamicFeeHook.sol:DynamicFeeHook",
             abi.encode(
                 manager,
-                address(0x456), // EventToken dummy, will be updated after campaign creation
-                address(0x456) // FundingToken dummy, will be updated after campaign creation
+                address(this) // Test contract as authorized caller for now
             ),
             hookAddress
         );

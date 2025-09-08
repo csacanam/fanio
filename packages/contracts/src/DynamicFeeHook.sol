@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-// ============================================================================
-// UNISWAP V4 CORE IMPORTS
-// ============================================================================
 import {BaseHook} from "v4-periphery/src/utils/BaseHook.sol";
 import {IPoolManager} from "v4-core/interfaces/IPoolManager.sol";
 import {IHooks} from "v4-core/interfaces/IHooks.sol";
@@ -12,76 +9,65 @@ import {PoolKey} from "v4-core/types/PoolKey.sol";
 import {PoolId, PoolIdLibrary} from "v4-core/types/PoolId.sol";
 import {Currency, CurrencyLibrary} from "v4-core/types/Currency.sol";
 import {BalanceDelta} from "v4-core/types/BalanceDelta.sol";
-import {ModifyLiquidityParams} from "v4-core/types/PoolOperation.sol";
 import {SwapParams} from "v4-core/types/PoolOperation.sol";
-
-// ============================================================================
-// UNISWAP V4 LIBRARIES
-// ============================================================================
-import {TickMath} from "v4-core/libraries/TickMath.sol";
-import {LiquidityAmounts} from "v4-periphery/src/libraries/LiquidityAmounts.sol";
-
-// ============================================================================
-// EXTERNAL DEPENDENCIES
-// ============================================================================
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title DynamicFeeHook
- * @notice Ultra-simplified Uniswap V4 hook for Fanio event token trading
- * @dev Automatically adds initial liquidity and implements dynamic fees
- *
- * ## Features:
- * - ✅ Automatic liquidity provision on pool initialization
- * - ✅ Dynamic fees: cheaper buys, expensive sells
- * - ✅ Full-range liquidity for maximum trading coverage
- * - ✅ Works with any token pair (auto-detects from balances)
- *
+ * @notice Uniswap V4 hook that implements dynamic fees for Fanio event token trading
+ * @dev Applies different fee rates for buying vs selling event tokens:
+ *      - Buy EventToken: 0.01% cheaper (encourages participation)
+ *      - Sell EventToken: 0.1% more expensive (discourages early exit)
  * @author Fanio Team
  */
 contract DynamicFeeHook is BaseHook {
     using CurrencyLibrary for Currency;
     using PoolIdLibrary for PoolKey;
 
-    // ============================================================================
-    // CONSTANTS
-    // ============================================================================
+    /// @notice Maps pool ID to its EventToken address for precise buy/sell detection
+    mapping(PoolId => address) public eventTokens;
 
-    /// @notice Full range ticks for maximum liquidity coverage
-    int24 public constant FULL_RANGE_LOWER = -887220;
-    int24 public constant FULL_RANGE_UPPER = 887220;
-
-    /// @notice Initial tick for 1.2:1 price ratio (early backers get 20% appreciation)
-    int24 public constant INITIAL_TICK = 1824; // log(1.2) / log(1.0001) ≈ 1824
-
-    // ============================================================================
-    // EVENTS
-    // ============================================================================
+    /// @notice Address authorized to configure EventTokens (typically FundingManager)
+    address public authorizedCaller;
 
     /**
-     * @notice Emitted when initial liquidity is added to a pool
-     * @param poolId Pool ID
-     * @param token0Amount Amount of token0 added
-     * @param token1Amount Amount of token1 added
-     * @param liquidity Amount of liquidity added
+     * @notice Deploy the hook with an authorized caller
+     * @param _manager The Uniswap V4 PoolManager contract
+     * @param _authorizedCaller Address that can configure EventTokens (usually FundingManager)
      */
-    event InitialLiquidityAdded(
-        PoolId indexed poolId,
-        uint256 token0Amount,
-        uint256 token1Amount,
-        uint128 liquidity
-    );
+    constructor(
+        IPoolManager _manager,
+        address _authorizedCaller
+    ) BaseHook(_manager) {
+        authorizedCaller = _authorizedCaller;
+    }
 
-    // ============================================================================
-    // CONSTRUCTOR
-    // ============================================================================
+    /**
+     * @notice Configure which token is the EventToken for a specific pool
+     * @param key The pool key to configure
+     * @param eventToken Address of the EventToken in this pool
+     * @dev Only the authorized caller can configure pools
+     */
+    function setEventToken(PoolKey calldata key, address eventToken) external {
+        require(msg.sender == authorizedCaller, "Unauthorized");
+        PoolId poolId = key.toId();
+        eventTokens[poolId] = eventToken;
+    }
 
-    constructor(IPoolManager _manager) BaseHook(_manager) {}
+    /**
+     * @notice Transfer authorization to a new address
+     * @param newCaller New authorized caller address
+     * @dev Only current authorized caller can transfer authorization
+     */
+    function setAuthorizedCaller(address newCaller) external {
+        require(msg.sender == authorizedCaller, "Unauthorized");
+        authorizedCaller = newCaller;
+    }
 
-    // ============================================================================
-    // HOOK PERMISSIONS
-    // ============================================================================
-
+    /**
+     * @notice Define which hook functions this contract implements
+     * @return permissions Struct indicating which hooks are enabled
+     * @dev Only afterSwap is enabled for dynamic fee implementation
+     */
     function getHookPermissions()
         public
         pure
@@ -91,7 +77,7 @@ contract DynamicFeeHook is BaseHook {
         return
             Hooks.Permissions({
                 beforeInitialize: false,
-                afterInitialize: true, // ✅ For automatic liquidity
+                afterInitialize: false,
                 beforeAddLiquidity: false,
                 beforeRemoveLiquidity: false,
                 afterAddLiquidity: false,
@@ -107,118 +93,62 @@ contract DynamicFeeHook is BaseHook {
             });
     }
 
-    // ============================================================================
-    // HOOK FUNCTIONS
-    // ============================================================================
-
     /**
-     * @notice Called after pool initialization - adds initial liquidity
-     * @dev Uses ALL current token balances to add full-range liquidity
-     */
-    function _afterInitialize(
-        address /* sender */,
-        PoolKey calldata key,
-        uint160 /* sqrtPriceX96 */,
-        int24 /* tick */
-    ) internal override returns (bytes4) {
-        // Get tokens from pool key
-        address token0 = Currency.unwrap(key.currency0);
-        address token1 = Currency.unwrap(key.currency1);
-
-        // Get ALL current balances
-        uint256 balance0 = IERC20(token0).balanceOf(address(this));
-        uint256 balance1 = IERC20(token1).balanceOf(address(this));
-
-        // Only add liquidity if we have both tokens
-        if (balance0 > 0 && balance1 > 0) {
-            _addInitialLiquidity(key, balance0, balance1);
-        }
-
-        return IHooks.afterInitialize.selector;
-    }
-
-    /**
-     * @notice Called after swap - implements dynamic fees
-     * @dev Buy: cheaper (0.01%), Sell: more expensive (0.1%)
+     * @notice Hook called after each swap to apply dynamic fees
+     * @param key Pool key for the swap
+     * @param delta Balance changes from the swap
+     * @return selector The function selector to confirm hook execution
+     * @return feeOverride LP fee override in basis points (1 bp = 0.01%)
+     * @dev Determines if user is buying or selling EventToken and applies appropriate fee
      */
     function _afterSwap(
         address /* sender */,
-        PoolKey calldata /* key */,
+        PoolKey calldata key,
         SwapParams calldata /* params */,
         BalanceDelta delta,
         bytes calldata /* hookData */
     ) internal override returns (bytes4, int128) {
-        // Determine if this is a buy or sell using BalanceDelta
-        bool isBuy = _isBuySwap(delta);
-
-        // Calculate dynamic fee adjustment
-        int128 feeAdjustment = _calculateDynamicFee(isBuy);
-
-        return (IHooks.afterSwap.selector, feeAdjustment);
+        bool isBuy = _isBuySwap(key, delta);
+        int128 feeOverride = _calculateDynamicFee(isBuy);
+        return (IHooks.afterSwap.selector, feeOverride);
     }
 
     /**
-     * @notice Determine if swap is buy or sell using BalanceDelta
-     * @param delta Balance delta from the swap
-     * @return true if user is buying (receiving tokens), false if selling (paying tokens)
+     * @notice Determine if a swap is buying or selling the EventToken
+     * @param key Pool key to check
+     * @param delta Balance changes from the swap
+     * @return true if buying EventToken, false if selling EventToken
+     * @dev Uses the configured EventToken address to precisely detect buy vs sell
      */
-    function _isBuySwap(BalanceDelta delta) internal pure returns (bool) {
-        // If user is receiving more than paying, it's a buy
-        // If user is paying more than receiving, it's a sell
-        // Simple heuristic: if both deltas are negative (user paying both), it's a sell
-        // Otherwise, it's a buy
-        return !(delta.amount0() < 0 && delta.amount1() < 0);
-    }
+    function _isBuySwap(
+        PoolKey calldata key,
+        BalanceDelta delta
+    ) internal view returns (bool) {
+        PoolId poolId = key.toId();
+        address eventToken = eventTokens[poolId];
 
-    /**
-     * @notice Calculate dynamic fee adjustment
-     * @param isBuy Whether this is a buy swap
-     * @return feeAdjustment Fee adjustment (negative = cheaper, positive = more expensive)
-     */
-    function _calculateDynamicFee(bool isBuy) internal pure returns (int128) {
-        if (isBuy) {
-            // Buy: make it cheaper (negative adjustment)
-            return -100; // 0.01% cheaper
+        require(eventToken != address(0), "Pool not configured");
+
+        address token0 = Currency.unwrap(key.currency0);
+        bool isEventToken0 = (token0 == eventToken);
+
+        if (isEventToken0) {
+            // EventToken is token0: Buy = receive EventToken, pay other token
+            return delta.amount0() > 0 && delta.amount1() < 0;
         } else {
-            // Sell: make it more expensive (positive adjustment)
-            return 1000; // 0.1% more expensive
+            // EventToken is token1: Buy = receive EventToken, pay other token
+            return delta.amount1() > 0 && delta.amount0() < 0;
         }
     }
 
     /**
-     * @notice Add initial liquidity to the pool
-     * @param key Pool key
-     * @param amount0 Amount of token0 to add
-     * @param amount1 Amount of token1 to add
+     * @notice Calculate the dynamic fee override
+     * @param isBuy True if buying EventToken, false if selling
+     * @return fee LP fee override in basis points (1 bp = 0.01%)
+     *         - Buy: 100 bp (1% - entry fee for true fans only)
+     *         - Sell: 1000 bp (10% - strong deterrent against speculation)
      */
-    function _addInitialLiquidity(
-        PoolKey memory key,
-        uint256 amount0,
-        uint256 amount1
-    ) internal {
-        // Calculate liquidity for full range
-        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
-            TickMath.getSqrtPriceAtTick(INITIAL_TICK), // Initial price: 1.2:1
-            TickMath.getSqrtPriceAtTick(FULL_RANGE_LOWER),
-            TickMath.getSqrtPriceAtTick(FULL_RANGE_UPPER),
-            amount0,
-            amount1
-        );
-
-        // Add liquidity to the pool
-        poolManager.modifyLiquidity(
-            key,
-            ModifyLiquidityParams({
-                tickLower: FULL_RANGE_LOWER,
-                tickUpper: FULL_RANGE_UPPER,
-                liquidityDelta: int256(uint256(liquidity)),
-                salt: 0
-            }),
-            ""
-        );
-
-        // Emit event for initial liquidity added
-        PoolId poolId = key.toId();
-        emit InitialLiquidityAdded(poolId, amount0, amount1, liquidity);
+    function _calculateDynamicFee(bool isBuy) internal pure returns (int128) {
+        return isBuy ? int128(100) : int128(1000);
     }
 }
