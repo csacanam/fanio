@@ -9,18 +9,73 @@ import {MockERC20} from "v4-periphery/lib/v4-core/lib/solmate/src/test/utils/moc
 import {Deployers} from "@uniswap/v4-core/test/utils/Deployers.sol";
 import {Hooks} from "v4-core/libraries/Hooks.sol";
 
+/**
+ * @title EventTokenTest
+ * @notice Test suite for EventToken contract functionality
+ * @dev Tests the ERC20 token implementation and access control
+ *
+ * Test Coverage:
+ * - Token deployment with correct parameters
+ * - Minting functionality and access control
+ * - Transfer operations between users
+ * - Balance and supply management
+ * - Integration with FundingManager
+ *
+ * Test Flow:
+ * 1. Deploy EventToken through FundingManager
+ * 2. Test minting permissions (only FundingManager can mint)
+ * 3. Test transfer operations
+ * 4. Verify balance and supply calculations
+ */
 contract EventTokenTest is Test, Deployers {
+    // ========================================
+    // CONTRACT INSTANCES
+    // ========================================
+
+    /// @notice EventToken contract under test
     EventToken public eventToken;
+
+    /// @notice FundingManager for token deployment
     FundingManager public fundingManager;
+
+    /// @notice Mock USDC token for testing
     MockERC20 public mockUSDC;
 
+    // ========================================
+    // TEST ACCOUNTS
+    // ========================================
+
+    /// @notice Campaign organizer address
     address public organizer = address(0x1);
+
+    /// @notice First contributor address
     address public contributor1 = address(0x2);
+
+    /// @notice Second contributor address
     address public contributor2 = address(0x3);
 
-    uint256 public constant TARGET_AMOUNT = 100_000e6; // 100k USDC (6 decimals)
-    uint256 public constant TOKEN_CAP = 155_000e18; // 155% of target (18 decimals)
+    // ========================================
+    // TEST CONSTANTS
+    // ========================================
 
+    /// @notice Campaign target amount (100k USDC, 6 decimals)
+    uint256 public constant TARGET_AMOUNT = 100_000e6;
+
+    /// @notice Token cap (155% of target, 18 decimals)
+    uint256 public constant TOKEN_CAP = 155_000e18;
+
+    /**
+     * @notice Set up test environment with EventToken deployment
+     * @dev Creates a campaign and deploys EventToken through FundingManager
+     *
+     * Setup Process:
+     * 1. Deploy MockUSDC token
+     * 2. Deploy Uniswap V4 infrastructure
+     * 3. Deploy DynamicFeeHook with proper flags
+     * 4. Deploy FundingManager with all dependencies
+     * 5. Create a campaign to deploy EventToken
+     * 6. Mint test tokens to accounts
+     */
     function setUp() public {
         // Deploy MockUSDC with 6 decimals (like real USDC)
         mockUSDC = new MockERC20("Mock USDC", "USDC", 6);

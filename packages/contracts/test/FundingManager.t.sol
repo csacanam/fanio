@@ -13,21 +13,84 @@ import {Currency} from "v4-core/types/Currency.sol";
 import {IHooks} from "v4-core/interfaces/IHooks.sol";
 import {PoolId} from "v4-core/types/PoolId.sol";
 
+/**
+ * @title FundingManagerTest
+ * @notice Comprehensive test suite for FundingManager contract
+ * @dev Tests the core functionality of the crowdfunding platform
+ *
+ * Test Coverage:
+ * - Campaign creation and validation
+ * - User contributions and token minting
+ * - Campaign expiration handling
+ * - Funding finalization and pool creation
+ * - Access control and security
+ * - Integration with DynamicFeeHook
+ *
+ * Test Flow:
+ * 1. Deploy contracts with proper configuration
+ * 2. Create campaigns with various parameters
+ * 3. Test contribution mechanics
+ * 4. Verify campaign state transitions
+ * 5. Test pool creation when goals are reached
+ */
 contract FundingManagerTest is Test, Deployers {
+    // ========================================
+    // CONTRACT INSTANCES
+    // ========================================
+
+    /// @notice FundingManager contract under test
     FundingManager public fundingManager;
+
+    /// @notice DynamicFeeHook for pool fee management
     DynamicFeeHook public hook;
+
+    /// @notice Mock USDC token for testing
     MockERC20 public mockUSDC;
 
+    // ========================================
+    // TEST ACCOUNTS
+    // ========================================
+
+    /// @notice Campaign organizer address
     address public organizer = address(0x1);
+
+    /// @notice First contributor address
     address public contributor1 = address(0x2);
+
+    /// @notice Second contributor address
     address public contributor2 = address(0x3);
+
+    /// @notice Protocol wallet for fee collection
     address public protocolWallet = address(0x456);
 
-    uint256 public constant TARGET_AMOUNT = 100_000e6; // 100k USDC (what organizer wants)
-    uint256 public constant TOTAL_TO_RAISE = 130_000e6; // 130k USDC (100k + 30k pool)
-    uint256 public constant ORGANIZER_DEPOSIT = 10_000e6; // 10% of target
-    uint256 public constant CONTRIBUTION_AMOUNT = 50_000e6; // 50k USDC
+    // ========================================
+    // TEST CONSTANTS
+    // ========================================
 
+    /// @notice Campaign target amount (100k USDC)
+    uint256 public constant TARGET_AMOUNT = 100_000e6;
+
+    /// @notice Total amount to raise including pool (130k USDC)
+    uint256 public constant TOTAL_TO_RAISE = 130_000e6;
+
+    /// @notice Organizer deposit (10% of target)
+    uint256 public constant ORGANIZER_DEPOSIT = 10_000e6;
+
+    /// @notice Standard contribution amount for tests
+    uint256 public constant CONTRIBUTION_AMOUNT = 50_000e6;
+
+    /**
+     * @notice Set up test environment with all required contracts
+     * @dev Deploys FundingManager, DynamicFeeHook, and test tokens
+     *
+     * Setup Process:
+     * 1. Deploy MockUSDC token (6 decimals like real USDC)
+     * 2. Deploy Uniswap V4 infrastructure (PoolManager, routers)
+     * 3. Deploy DynamicFeeHook with proper flags
+     * 4. Deploy FundingManager with all dependencies
+     * 5. Configure hook authorization
+     * 6. Mint test tokens to accounts
+     */
     function setUp() public {
         // Deploy MockUSDC with 6 decimals (like real USDC)
         mockUSDC = new MockERC20("Mock USDC", "USDC", 6);

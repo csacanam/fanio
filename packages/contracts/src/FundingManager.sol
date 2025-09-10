@@ -15,9 +15,26 @@ import {Currency, CurrencyLibrary} from "v4-core/types/Currency.sol";
 import {TickMath} from "v4-core/libraries/TickMath.sol";
 import {LPFeeLibrary} from "v4-core/libraries/LPFeeLibrary.sol";
 import {ModifyLiquidityParams} from "v4-core/types/PoolOperation.sol";
+// TODO: Replace with production LiquidityAmounts when available
+// Currently using test utility - needs to be replaced for production deployment
 import {LiquidityAmounts} from "@uniswap/v4-core/test/utils/LiquidityAmounts.sol";
 
+/**
+ * @title IModifyLiquidityRouter
+ * @dev Interface for Uniswap V4 ModifyLiquidityRouter contract
+ * 
+ * This interface allows the FundingManager to interact with Uniswap V4's
+ * liquidity management system without importing test dependencies.
+ * 
+ * @notice This is a production-ready interface for Uniswap V4 periphery contracts
+ */
 interface IModifyLiquidityRouter {
+    /**
+     * @dev Add or remove liquidity from a Uniswap V4 pool
+     * @param key PoolKey identifying the pool
+     * @param params Parameters for liquidity modification
+     * @param hookData Additional data for hook callbacks
+     */
     function modifyLiquidity(
         PoolKey memory key,
         ModifyLiquidityParams memory params,
@@ -222,13 +239,18 @@ contract FundingManager is ReentrancyGuard {
     // ========================================
 
     /**
-     * @dev Initialize the FundingManager contract
+     * @dev Initialize the FundingManager contract with all required dependencies
+     * 
      * @param defaultFundingToken Address of the default funding token (e.g., USDC)
      * @param protocolWallet Address where protocol fees will be collected
+     * @param _poolManager Uniswap V4 PoolManager contract for pool operations
+     * @param _dynamicFeeHook DynamicFeeHook contract for dynamic trading fees
+     * @param _modifyLiquidityRouter Uniswap V4 ModifyLiquidityRouter for liquidity management
      *
-     * @notice Both parameters are immutable and cannot be changed after deployment
+     * @notice All parameters are immutable and cannot be changed after deployment
      * @notice The defaultFundingToken is used when campaigns don't specify a custom token
      * @notice The protocolWallet receives 10% of successful campaign targets as fees
+     * @notice Pool creation and liquidity management are handled by Uniswap V4 contracts
      */
     constructor(
         address defaultFundingToken,
@@ -788,79 +810,122 @@ contract FundingManager is ReentrancyGuard {
     }
 
     /**
-     * @dev Initialize hook pool and add initial liquidity
-     * @param campaignId ID of the campaign
-     * @param fundingAmount Amount of funding tokens
-     * @param tokenAmount Amount of event tokens
+     * @dev Initialize Uniswap V4 pool with DynamicFeeHook and add initial liquidity
      * 
+     * This function is called automatically when a campaign reaches its funding goal.
+     * It creates a new Uniswap V4 pool with dynamic fees and adds liquidity using
+     * the excess funding (30% of target) and corresponding EventTokens (25% of target).
+     * 
+     * Process:
+     * 1. Creates PoolKey with DYNAMIC_FEE_FLAG for hook-controlled fees
+     * 2. Configures DynamicFeeHook with the EventToken address
+     * 3. Initializes the pool with a 1.2:1 price ratio (USDC:EventToken)
+     * 4. Adds full-range liquidity to the pool
+     * 5. Emits PoolInitialized event
+     * 
+     * @param campaignId ID of the campaign that reached its goal
+     * @param fundingAmount Amount of funding tokens to add to pool (30% of target)
+     * @param tokenAmount Amount of EventTokens to add to pool (25% of target)
+     * 
+     * @notice Pool uses dynamic fees: 1% for buys, 10% for sells
+     * @notice Liquidity is added in full range for maximum flexibility
+     * @notice Price is initialized at 1.2:1 ratio (USDC:EventToken)
      */
-function _initializeHookPool(
-    uint256 campaignId,
-    uint256 fundingAmount,
-    uint256 tokenAmount
-) internal {
-    EventCampaign storage campaign = campaigns[campaignId];
-    
-    // Create PoolKey with DYNAMIC fees (no fixed fee)
-    PoolKey memory key = PoolKey({
-        currency0: Currency.wrap(
-            campaign.fundingToken < campaign.eventToken ? 
-                campaign.fundingToken : campaign.eventToken
-        ),
-        currency1: Currency.wrap(
-            campaign.fundingToken < campaign.eventToken ? 
-                campaign.eventToken : campaign.fundingToken
-        ),
-        fee: LPFeeLibrary.DYNAMIC_FEE_FLAG,  // ✅ Dynamic fees, no fixed fee
-        tickSpacing: 60,
-        hooks: IHooks(address(dynamicFeeHook))
-    });
+    function _initializeHookPool(
+        uint256 campaignId,
+        uint256 fundingAmount,
+        uint256 tokenAmount
+    ) internal {
+        EventCampaign storage campaign = campaigns[campaignId];
+        
+        // Create PoolKey with DYNAMIC fees (hook-controlled fees)
+        // Currency ordering: lower address becomes currency0, higher becomes currency1
+        PoolKey memory key = PoolKey({
+            currency0: Currency.wrap(
+                campaign.fundingToken < campaign.eventToken ? 
+                    campaign.fundingToken : campaign.eventToken
+            ),
+            currency1: Currency.wrap(
+                campaign.fundingToken < campaign.eventToken ? 
+                    campaign.eventToken : campaign.fundingToken
+            ),
+            fee: LPFeeLibrary.DYNAMIC_FEE_FLAG,  // Hook controls fees: 1% buy, 10% sell
+            tickSpacing: 60,                     // Standard tick spacing for most pools
+            hooks: IHooks(address(dynamicFeeHook)) // Our custom fee hook
+        });
 
-    // Configure hook BEFORE initializing pool
-    dynamicFeeHook.setEventToken(key, campaign.eventToken);
-    
-    // Initialize pool with 1.2:1 price (same as your test)
-    uint160 sqrtPriceX96 = TickMath.getSqrtPriceAtTick(274500); // 1.2:1 price
-    poolManager.initialize(key, sqrtPriceX96);
-    
-    // Add initial liquidity (25% of total supply goes to pool)
-    _addInitialLiquidity(key, campaign, fundingAmount, tokenAmount);
-    
-    emit PoolInitialized(campaignId, address(poolManager), key);
-}
+        // Configure hook BEFORE initializing pool
+        dynamicFeeHook.setEventToken(key, campaign.eventToken);
+        
+        // Initialize pool with 1.2:1 price (same as your test)
+        uint160 sqrtPriceX96 = TickMath.getSqrtPriceAtTick(274500); // 1.2:1 price
+        poolManager.initialize(key, sqrtPriceX96);
+        
+        // Add initial liquidity (25% of total supply goes to pool)
+        _addInitialLiquidity(key, campaign, fundingAmount, tokenAmount);
+        
+        emit PoolInitialized(campaignId, address(poolManager), key);
+    }
 
-function _addInitialLiquidity(
-    PoolKey memory key,
-    EventCampaign storage campaign,
-    uint256 fundingAmount,
-    uint256 tokenAmount
-) internal {
-    // Approve tokens to modifyLiquidityRouter
-    IERC20(campaign.fundingToken).approve(address(modifyLiquidityRouter), fundingAmount);
-    IERC20(campaign.eventToken).approve(address(modifyLiquidityRouter), tokenAmount);
-    
-    // Calculate liquidity using same logic as your test
-    uint160 sqrtPriceX96 = TickMath.getSqrtPriceAtTick(274500);
-    uint160 sqrtLower = TickMath.getSqrtPriceAtTick(-887220);  // Full range
-    uint160 sqrtUpper = TickMath.getSqrtPriceAtTick(887220);   // Full range
-    
-    bool fundingIsCurrency0 = Currency.unwrap(key.currency0) == campaign.fundingToken;
-    uint256 amount0 = fundingIsCurrency0 ? fundingAmount : tokenAmount;
-    uint256 amount1 = fundingIsCurrency0 ? tokenAmount : fundingAmount;
-    
-    uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
-        sqrtPriceX96, sqrtLower, sqrtUpper, amount0, amount1
-    );
-    
-    ModifyLiquidityParams memory params = ModifyLiquidityParams({
-        tickLower: -887220,  // Full range
-        tickUpper: 887220,   // Full range  
-        liquidityDelta: int256(uint256(liquidity)),
-        salt: 0
-    });
-    
-    modifyLiquidityRouter.modifyLiquidity(key, params, "");
-}
+    /**
+     * @dev Add initial liquidity to the Uniswap V4 pool
+     * 
+     * This function handles the technical details of adding liquidity to the pool
+     * using the Uniswap V4 ModifyLiquidityRouter. It calculates the optimal
+     * liquidity amount and adds it in full range for maximum flexibility.
+     * 
+     * Process:
+     * 1. Approves both tokens to the ModifyLiquidityRouter
+     * 2. Calculates optimal liquidity using LiquidityAmounts library
+     * 3. Determines correct token ordering (currency0 vs currency1)
+     * 4. Creates ModifyLiquidityParams for full range liquidity
+     * 5. Calls ModifyLiquidityRouter to add liquidity to pool
+     * 
+     * @param key PoolKey identifying the pool to add liquidity to
+     * @param campaign Campaign data containing token addresses
+     * @param fundingAmount Amount of funding tokens to add (30% of target)
+     * @param tokenAmount Amount of EventTokens to add (25% of target)
+     * 
+     * @notice Uses full range liquidity (-887220 to 887220 ticks)
+     * @notice Handles token ordering automatically based on address comparison
+     * @notice Liquidity calculation accounts for current pool price (1.2:1)
+     */
+    function _addInitialLiquidity(
+        PoolKey memory key,
+        EventCampaign storage campaign,
+        uint256 fundingAmount,
+        uint256 tokenAmount
+    ) internal {
+        // Step 1: Approve tokens to ModifyLiquidityRouter
+        IERC20(campaign.fundingToken).approve(address(modifyLiquidityRouter), fundingAmount);
+        IERC20(campaign.eventToken).approve(address(modifyLiquidityRouter), tokenAmount);
+        
+        // Step 2: Calculate optimal liquidity for full range
+        uint160 sqrtPriceX96 = TickMath.getSqrtPriceAtTick(274500); // Current price (1.2:1)
+        uint160 sqrtLower = TickMath.getSqrtPriceAtTick(-887220);   // Full range lower bound
+        uint160 sqrtUpper = TickMath.getSqrtPriceAtTick(887220);    // Full range upper bound
+        
+        // Step 3: Determine token ordering (currency0 vs currency1)
+        bool fundingIsCurrency0 = Currency.unwrap(key.currency0) == campaign.fundingToken;
+        uint256 amount0 = fundingIsCurrency0 ? fundingAmount : tokenAmount;
+        uint256 amount1 = fundingIsCurrency0 ? tokenAmount : fundingAmount;
+        
+        // Step 4: Calculate liquidity using Uniswap V4 LiquidityAmounts library
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96, sqrtLower, sqrtUpper, amount0, amount1
+        );
+        
+        // Step 5: Create parameters for full range liquidity addition
+        ModifyLiquidityParams memory params = ModifyLiquidityParams({
+            tickLower: -887220,  // Full range lower tick
+            tickUpper: 887220,   // Full range upper tick
+            liquidityDelta: int256(uint256(liquidity)), // Amount of liquidity to add
+            salt: 0              // Salt for position uniqueness
+        });
+        
+        // Step 6: Add liquidity to the pool via ModifyLiquidityRouter
+        modifyLiquidityRouter.modifyLiquidity(key, params, "");
+    }
 
     /**
      * @dev Convert funding token units to event token units

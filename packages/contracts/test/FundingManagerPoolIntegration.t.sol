@@ -276,9 +276,9 @@ contract FundingManagerPoolIntegrationTest is Test, Deployers {
     }
 
     function _verifyPoolCreation(
-        uint256 campaignId,
+        uint256 /* campaignId */,
         address eventTokenAddress
-    ) internal {
+    ) internal view {
         // Create expected pool key
         PoolKey memory expectedKey = PoolKey({
             currency0: Currency.wrap(
