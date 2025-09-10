@@ -3,6 +3,8 @@ pragma solidity ^0.8.26;
 
 import {Script} from "forge-std/Script.sol";
 import {FundingManager} from "../src/FundingManager.sol";
+import {DynamicFeeHook} from "../src/DynamicFeeHook.sol";
+import {IPoolManager} from "v4-core/interfaces/IPoolManager.sol";
 import {Config} from "./Config.s.sol";
 import {MockUSDC} from "../src/mocks/MockUSDC.sol";
 import {console} from "forge-std/console.sol";
@@ -33,11 +35,21 @@ contract DeployFundingManager is Script {
             // In real usage, this would be the actual PoolManager
             address poolManager = address(0x123); // Mock address for local testing
 
+            // Deploy DynamicFeeHook first
+            DynamicFeeHook dynamicFeeHook = new DynamicFeeHook(
+                IPoolManager(poolManager),
+                deployer // Use deployer as authorized caller
+            );
+
+            // Deploy ModifyLiquidityRouter (mock for now)
+            address modifyLiquidityRouter = address(0x456); // Mock address for local testing
+
             FundingManager fundingManager = new FundingManager(
                 fundingToken,
                 protocolWallet,
-                poolManager
-                // address(0) // TODO: Hook parameter temporarily disabled for demo
+                poolManager,
+                address(dynamicFeeHook),
+                modifyLiquidityRouter
             );
 
             vm.stopBroadcast();
@@ -56,11 +68,21 @@ contract DeployFundingManager is Script {
             // Base Sepolia PoolManager address
             address poolManager = 0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408;
 
+            // Deploy DynamicFeeHook first
+            DynamicFeeHook dynamicFeeHook = new DynamicFeeHook(
+                IPoolManager(poolManager),
+                deployer // Use deployer as authorized caller
+            );
+
+            // Deploy ModifyLiquidityRouter (mock for now)
+            address modifyLiquidityRouter = address(0x456); // Mock address for local testing
+
             FundingManager fundingManager = new FundingManager(
                 fundingToken,
                 protocolWallet,
-                poolManager
-                // address(0) // TODO: Hook parameter temporarily disabled for demo
+                poolManager,
+                address(dynamicFeeHook),
+                modifyLiquidityRouter
             );
 
             vm.stopBroadcast();

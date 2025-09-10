@@ -4,8 +4,10 @@ pragma solidity ^0.8.26;
 import {Test} from "forge-std/Test.sol";
 import {EventToken} from "../src/EventToken.sol";
 import {FundingManager} from "../src/FundingManager.sol";
+import {DynamicFeeHook} from "../src/DynamicFeeHook.sol";
 import {MockERC20} from "v4-periphery/lib/v4-core/lib/solmate/src/test/utils/mocks/MockERC20.sol";
 import {Deployers} from "@uniswap/v4-core/test/utils/Deployers.sol";
+import {Hooks} from "v4-core/libraries/Hooks.sol";
 
 contract EventTokenTest is Test, Deployers {
     EventToken public eventToken;
@@ -28,11 +30,22 @@ contract EventTokenTest is Test, Deployers {
 
         // Deploy FundingManager with MockUSDC and real PoolManager
         address mockProtocolWallet = address(0x456);
+
+        // Deploy DynamicFeeHook with proper flags
+        uint160 flags = uint160(Hooks.AFTER_SWAP_FLAG);
+        deployCodeTo(
+            "DynamicFeeHook.sol",
+            abi.encode(manager, address(this)), // Test contract as authorized caller
+            address(flags)
+        );
+        DynamicFeeHook dynamicFeeHook = DynamicFeeHook(address(flags));
+
         fundingManager = new FundingManager(
             address(mockUSDC),
             mockProtocolWallet,
-            address(manager)
-            // address(0) // TODO: Hook parameter temporarily disabled for demo
+            address(manager),
+            address(dynamicFeeHook),
+            address(modifyLiquidityRouter)
         );
 
         // Deploy EventToken with campaign info

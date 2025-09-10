@@ -47,12 +47,18 @@ contract FundingManagerTest is Test, Deployers {
             hookAddress
         );
 
-        // Deploy FundingManager with real PoolManager (hook temporarily disabled for demo)
+        // Deploy FundingManager with real PoolManager and hook
         fundingManager = new FundingManager(
             address(mockUSDC),
             protocolWallet,
-            address(manager)
-            // hookAddress // TODO: Hook parameter temporarily disabled for demo
+            address(manager),
+            hookAddress,
+            address(modifyLiquidityRouter)
+        );
+
+        // Update hook to use FundingManager as authorized caller
+        DynamicFeeHook(hookAddress).setAuthorizedCaller(
+            address(fundingManager)
         );
 
         // Initialize the hook variable with the deployed address
@@ -202,10 +208,9 @@ contract FundingManagerTest is Test, Deployers {
             protocolInitialBalance + ORGANIZER_DEPOSIT
         );
 
-        // TODO: Hook functionality temporarily disabled for demo
-        // Contract should have excess USDC (30k) since hook transfer is disabled
-        uint256 expectedExcessUSDC = TOTAL_TO_RAISE - TARGET_AMOUNT; // 130k - 100k = 30k
-        assertEq(contractFinalBalance, expectedExcessUSDC);
+        // With pool creation enabled, all USDC goes to the pool
+        // Contract should have 0 USDC remaining (all used for pool liquidity)
+        assertEq(contractFinalBalance, 0);
 
         // Contributor1 should have 0 USDC (all contributed)
         assertEq(contributor1FinalBalance, 0);
@@ -214,22 +219,23 @@ contract FundingManagerTest is Test, Deployers {
         uint256 totalSupply = eventToken.totalSupply();
 
         // Calculate expected total supply accounting for decimal conversion
-        // TOTAL_TO_RAISE = 130_000e6 (130k USDC) -> 130_000e18 (130k TSBOG)
-        // TARGET_AMOUNT = 100_000e6 (100k USDC) -> 100_000e18 (100k TSBOG)
-        // Pool tokens = 25% of target = 25_000e18 (25k TSBOG)
-        // Expected total = 130k + 25k = 155k TSBOG
-        uint256 expectedTotalSupply = (TOTAL_TO_RAISE * 1e12) + // Convert 130k USDC to TSBOG
+        // TOTAL_TO_RAISE = 130_000e6 (130k USDC) -> 130_000e18 (130k EventTokens)
+        // Pool tokens = 25% of target = 25_000e18 (25k EventTokens)
+        // Expected total = 130k + 25k = 155k EventTokens
+        uint256 expectedTotalSupply = (TOTAL_TO_RAISE * 1e12) + // Convert 130k USDC to EventTokens
             ((TARGET_AMOUNT * 25) / 100) *
-            1e12; // Convert 25k USDC to TSBOG
+            1e12; // Convert 25k USDC to EventTokens
 
         assertEq(totalSupply, expectedTotalSupply);
 
-        // TODO: Hook functionality temporarily disabled for demo
-        // Verify pool tokens are kept in FundingManager (25% of target, not total raised)
-        assertEq(
-            eventToken.balanceOf(address(fundingManager)),
-            ((TARGET_AMOUNT * 25) / 100) * 1e12
-        ); // 25k TSBOG kept in contract
+        // With pool creation enabled, pool tokens go to PoolManager
+        // Verify pool tokens are in PoolManager (25% of target, not total raised)
+        assertApproxEqAbs(
+            eventToken.balanceOf(address(manager)),
+            ((TARGET_AMOUNT * 25) / 100) * 1e12,
+            2e18, // ±2 token tolerance due to Uniswap V4 math
+            "Pool should have ~25k EventTokens"
+        );
 
         // Verify contributor1 received tokens (1:1 ratio with contribution)
         assertEq(eventToken.balanceOf(contributor1), TOTAL_TO_RAISE * 1e12);

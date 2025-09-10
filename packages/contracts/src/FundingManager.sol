@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./EventToken.sol";
+import "./DynamicFeeHook.sol";
 
 // Uniswap V4 imports
 import {IPoolManager} from "v4-core/interfaces/IPoolManager.sol";
@@ -12,7 +13,17 @@ import {IHooks} from "v4-core/interfaces/IHooks.sol";
 import {PoolKey} from "v4-core/types/PoolKey.sol";
 import {Currency, CurrencyLibrary} from "v4-core/types/Currency.sol";
 import {TickMath} from "v4-core/libraries/TickMath.sol";
+import {LPFeeLibrary} from "v4-core/libraries/LPFeeLibrary.sol";
+import {ModifyLiquidityParams} from "v4-core/types/PoolOperation.sol";
+import {LiquidityAmounts} from "@uniswap/v4-core/test/utils/LiquidityAmounts.sol";
 
+interface IModifyLiquidityRouter {
+    function modifyLiquidity(
+        PoolKey memory key,
+        ModifyLiquidityParams memory params,
+        bytes memory hookData
+    ) external;
+}
 /**
  * @title FundingManager
  * @dev Trustless crowdfunding platform for live events powered by Uniswap v4 hooks
@@ -48,8 +59,11 @@ contract FundingManager is ReentrancyGuard {
     /// @notice Uniswap V4 PoolManager contract
     IPoolManager public immutable poolManager;
 
-    /// @notice Fanio trading hook contract
-    // address public fanioHook; // TODO: Hook variable temporarily disabled for demo
+    /// @notice Uniswap V4 ModifyLiquidityRouter contract
+    IModifyLiquidityRouter public immutable modifyLiquidityRouter;
+
+    /// @notice DynamicFeeHook contract for pool fees
+    DynamicFeeHook public immutable dynamicFeeHook;
 
     // ========================================
     // DATA STRUCTURES
@@ -219,17 +233,21 @@ contract FundingManager is ReentrancyGuard {
     constructor(
         address defaultFundingToken,
         address protocolWallet,
-        address _poolManager
-        // address _fanioHook // TODO: Hook parameter temporarily disabled for demo
+        address _poolManager,
+        address _dynamicFeeHook,
+        address _modifyLiquidityRouter
     ) {
         require(defaultFundingToken != address(0), "Invalid funding token");
         require(protocolWallet != address(0), "Invalid protocol wallet");
         require(_poolManager != address(0), "Invalid pool manager");
+        require(_dynamicFeeHook != address(0), "Invalid dynamic fee hook");
+        require(_modifyLiquidityRouter != address(0), "Invalid modify liquidity router");
 
         DEFAULT_FUNDING_TOKEN = IERC20(defaultFundingToken);
         PROTOCOL_WALLET = protocolWallet;
         poolManager = IPoolManager(_poolManager);
-        // fanioHook = _fanioHook; // TODO: Hook assignment temporarily disabled for demo
+        dynamicFeeHook = DynamicFeeHook(_dynamicFeeHook);
+        modifyLiquidityRouter = IModifyLiquidityRouter(_modifyLiquidityRouter);
     }
 
     // ========================================
@@ -509,17 +527,12 @@ contract FundingManager is ReentrancyGuard {
 
         emit CampaignFunded(campaignId, campaign.raisedAmount);
 
-        // TODO: Hook functionality temporarily disabled for demo
-        // Transfer tokens to hook for pool creation
-        // if (fanioHook != address(0)) {
-        //     uint256 fundingAmount = (campaign.targetAmount * 30) / 100; // 30% of target
-        //     uint256 tokenAmount = IERC20(campaign.eventToken).balanceOf(address(this)); // poolTokens already minted
+        if (address(dynamicFeeHook) != address(0)) {
+            uint256 fundingAmount = (campaign.targetAmount * 30) / 100; // 30% of target
+            uint256 tokenAmount = IERC20(campaign.eventToken).balanceOf(address(this)); // poolTokens already minted
             
-        //     _transferTokensToHook(campaignId, fundingAmount, tokenAmount);
-            
-        //     // TODO: Hook pool initialization temporarily disabled for demo
-        //     // _initializeHookPool(campaignId, fundingAmount, tokenAmount);
-        // }
+            _initializeHookPool(campaignId, fundingAmount, tokenAmount);
+        }
     }
 
     // ========================================
@@ -780,33 +793,74 @@ contract FundingManager is ReentrancyGuard {
      * @param fundingAmount Amount of funding tokens
      * @param tokenAmount Amount of event tokens
      * 
-     * @notice TEMPORARILY DISABLED FOR DEMO - Hook not yet functional
      */
-    function _initializeHookPool(
-        uint256 campaignId,
-        uint256 fundingAmount,
-        uint256 tokenAmount
-    ) internal {
-        // TODO: Hook pool initialization temporarily disabled for demo
-        // EventCampaign storage campaign = campaigns[campaignId];
-        
-        // // Create PoolKey for the trading pool
-        // PoolKey memory key = PoolKey({
-        //     currency0: Currency.wrap(campaign.fundingToken < campaign.eventToken ? 
-        //         campaign.fundingToken : campaign.eventToken),
-        //     currency1: Currency.wrap(campaign.fundingToken < campaign.eventToken ? 
-        //         campaign.eventToken : campaign.fundingToken),
-        //     fee: 3000, // 0.3% fee
-        //     tickSpacing: 60,
-        //     hooks: IHooks(fanioHook)
-        // });
+function _initializeHookPool(
+    uint256 campaignId,
+    uint256 fundingAmount,
+    uint256 tokenAmount
+) internal {
+    EventCampaign storage campaign = campaigns[campaignId];
+    
+    // Create PoolKey with DYNAMIC fees (no fixed fee)
+    PoolKey memory key = PoolKey({
+        currency0: Currency.wrap(
+            campaign.fundingToken < campaign.eventToken ? 
+                campaign.fundingToken : campaign.eventToken
+        ),
+        currency1: Currency.wrap(
+            campaign.fundingToken < campaign.eventToken ? 
+                campaign.eventToken : campaign.fundingToken
+        ),
+        fee: LPFeeLibrary.DYNAMIC_FEE_FLAG,  // ✅ Dynamic fees, no fixed fee
+        tickSpacing: 60,
+        hooks: IHooks(address(dynamicFeeHook))
+    });
 
-        // // Initialize the pool (this will trigger the hook's afterInitialize)
-        // uint160 sqrtPriceX96 = TickMath.getSqrtPriceAtTick(1824); // 1.2:1 price
-        // poolManager.initialize(key, sqrtPriceX96);
-        
-        // emit PoolInitialized(campaignId, address(poolManager), key);
-    }
+    // Configure hook BEFORE initializing pool
+    dynamicFeeHook.setEventToken(key, campaign.eventToken);
+    
+    // Initialize pool with 1.2:1 price (same as your test)
+    uint160 sqrtPriceX96 = TickMath.getSqrtPriceAtTick(274500); // 1.2:1 price
+    poolManager.initialize(key, sqrtPriceX96);
+    
+    // Add initial liquidity (25% of total supply goes to pool)
+    _addInitialLiquidity(key, campaign, fundingAmount, tokenAmount);
+    
+    emit PoolInitialized(campaignId, address(poolManager), key);
+}
+
+function _addInitialLiquidity(
+    PoolKey memory key,
+    EventCampaign storage campaign,
+    uint256 fundingAmount,
+    uint256 tokenAmount
+) internal {
+    // Approve tokens to modifyLiquidityRouter
+    IERC20(campaign.fundingToken).approve(address(modifyLiquidityRouter), fundingAmount);
+    IERC20(campaign.eventToken).approve(address(modifyLiquidityRouter), tokenAmount);
+    
+    // Calculate liquidity using same logic as your test
+    uint160 sqrtPriceX96 = TickMath.getSqrtPriceAtTick(274500);
+    uint160 sqrtLower = TickMath.getSqrtPriceAtTick(-887220);  // Full range
+    uint160 sqrtUpper = TickMath.getSqrtPriceAtTick(887220);   // Full range
+    
+    bool fundingIsCurrency0 = Currency.unwrap(key.currency0) == campaign.fundingToken;
+    uint256 amount0 = fundingIsCurrency0 ? fundingAmount : tokenAmount;
+    uint256 amount1 = fundingIsCurrency0 ? tokenAmount : fundingAmount;
+    
+    uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
+        sqrtPriceX96, sqrtLower, sqrtUpper, amount0, amount1
+    );
+    
+    ModifyLiquidityParams memory params = ModifyLiquidityParams({
+        tickLower: -887220,  // Full range
+        tickUpper: 887220,   // Full range  
+        liquidityDelta: int256(uint256(liquidity)),
+        salt: 0
+    });
+    
+    modifyLiquidityRouter.modifyLiquidity(key, params, "");
+}
 
     /**
      * @dev Convert funding token units to event token units
