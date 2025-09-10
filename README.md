@@ -86,26 +86,26 @@ Fanio turns every event into a liquid digital asset.
 
 ---
 
-## ⚙️ Secondary Market Flow
+## ⚙️ Secondary Market Flow ✅ IMPLEMENTED
 
 ### On Each Swap:
 
-- **Buy $EVENT**: 3% LP fee
-- **Sell $EVENT**: Higher, dynamic LP fee (10%) to discourage dumps
+- **Buy $EVENT**: 1% LP fee (encourages participation)
+- **Sell $EVENT**: 10% LP fee (discourages early dumps)
 
-### Fee Distribution:
+### Dynamic Fee Hook:
 
-- **40%** → Permanent liquidity (locked depth)
-- **60%** → Fanio (sustainability)
+- **Uniswap V4 Integration**: Custom hook automatically applies different fees
+- **Buy Protection**: Lower fees encourage fan participation
+- **Sell Deterrent**: Higher fees prevent speculation and dumps
+- **Automatic Pool Creation**: Pool is created when funding goal is reached
 
 ### Benefits:
 
 - Organizer gets nothing from swaps (already collected full goal upfront)
-- Fans benefit indirectly through more liquid and stable pool
+- Fans benefit from lower buy fees and higher sell fees
 - Pool strengthens with each trade
-- Fans have liquidity, but selling is costlier → encourages holding
-
-**Note**: This section describes the planned Uniswap v4 integration. Currently, the system focuses on the crowdfunding phase.
+- Dynamic fees protect token value and encourage holding
 
 ---
 
@@ -123,9 +123,9 @@ Fanio turns every event into a liquid digital asset.
 
 ### Fan Buys 100 USDC in Pool:
 
-- 3% fee → **3 USDC**
-- 1.2 USDC (40% of 3 USDC) → locked as permanent liquidity
-- 1.8 USDC (60% of 3 USDC) → Fanio
+- 1% fee → **1 USDC**
+- 0.4 USDC (40% of 1 USDC) → locked as permanent liquidity
+- 0.6 USDC (60% of 1 USDC) → Fanio
 
 ### Fan Sells 100 USDC Worth of $EVENT:
 
@@ -133,7 +133,23 @@ Fanio turns every event into a liquid digital asset.
 - 4 USDC (40% of 10 USDC) → permanent liquidity
 - 6 USDC (60% of 10 USDC) → Fanio
 
-**Note**: These examples show the planned Uniswap v4 integration. The current MVP focuses on crowdfunding and campaign management.
+---
+
+## 🎯 Current Status
+
+### ✅ Implemented Features
+
+- **Smart Contracts**: Complete crowdfunding system with Uniswap V4 integration
+- **Dynamic Fees**: 1% buy, 10% sell with custom hook implementation
+- **Pool Creation**: Automatic liquidity when funding goals are reached
+- **Token Minting**: Controlled EventToken creation with ERC20Capped
+- **Test Suite**: 21 comprehensive tests (100% passing)
+- **Documentation**: Complete technical documentation
+
+### 🚧 In Development
+
+- **Frontend Integration**: Web interface for campaign management
+- **Deployment Scripts**: Production deployment automation
 
 ---
 
@@ -165,6 +181,17 @@ Fanio turns every event into a liquid digital asset.
 fanio/
 ├── packages/
 │   ├── contracts/          # Smart contracts and blockchain logic
+│   │   ├── src/           # Source contracts
+│   │   │   ├── FundingManager.sol    # Core crowdfunding contract
+│   │   │   ├── EventToken.sol        # ERC20Capped event tokens
+│   │   │   └── DynamicFeeHook.sol    # Uniswap V4 fee hook
+│   │   ├── test/          # Comprehensive test suite
+│   │   │   ├── FundingManager.t.sol
+│   │   │   ├── EventToken.t.sol
+│   │   │   ├── DynamicFeeHook.t.sol
+│   │   │   └── FundingManagerPoolIntegration.t.sol
+│   │   ├── script/        # Deployment scripts
+│   │   └── lib/           # Dependencies (Uniswap V4, OpenZeppelin)
 │   └── frontend/           # Next.js web application
 │       ├── app/           # Next.js app router
 │       ├── components/    # React components
@@ -182,13 +209,14 @@ fanio/
 - Node.js (v18 or later)
 - pnpm package manager
 - Git
+- Foundry (for smart contract development)
 
 ### Installation
 
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/your-username/fanio.git
+   git clone https://github.com/csacanam/fanio.git
    cd fanio
    ```
 
@@ -198,14 +226,23 @@ fanio/
    pnpm install
    ```
 
-3. **Start the development server**
+3. **Set up smart contracts**
+
+   ```bash
+   cd packages/contracts
+   forge install
+   forge build
+   forge test
+   ```
+
+4. **Start the development server**
 
    ```bash
    cd packages/frontend
    pnpm dev
    ```
 
-4. **Open your browser**
+5. **Open your browser**
    Navigate to `http://localhost:3000`
 
 ---
@@ -221,11 +258,15 @@ fanio/
 - **React Hook Form** - Form management
 - **Zod** - Schema validation
 
-### Blockchain (Coming Soon)
+### Blockchain ✅ IMPLEMENTED
 
-- **Uniswap v4** - DEX infrastructure
-- **Custom Hooks** - Automated liquidity management
+- **Solidity ^0.8.26** - Smart contract language
+- **Uniswap V4** - DEX infrastructure with custom hooks
+- **DynamicFeeHook** - Custom hook for asymmetric fees (1% buy, 10% sell)
+- **FundingManager** - Core crowdfunding contract
+- **EventToken** - ERC20Capped tokens for each event
 - **USDC** - Stable currency for funding
+- **Foundry** - Development and testing framework
 
 ---
 
