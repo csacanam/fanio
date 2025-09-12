@@ -15,9 +15,7 @@ import {Currency, CurrencyLibrary} from "v4-core/types/Currency.sol";
 import {TickMath} from "v4-core/libraries/TickMath.sol";
 import {LPFeeLibrary} from "v4-core/libraries/LPFeeLibrary.sol";
 import {ModifyLiquidityParams} from "v4-core/types/PoolOperation.sol";
-// TODO: Replace with production LiquidityAmounts when available
-// Currently using test utility - needs to be replaced for production deployment
-import {LiquidityAmounts} from "@uniswap/v4-core/test/utils/LiquidityAmounts.sol";
+import {LiquidityAmounts} from "v4-periphery/src/libraries/LiquidityAmounts.sol";
 
 /**
  * @title IModifyLiquidityRouter
