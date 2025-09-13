@@ -6,8 +6,8 @@ import {EventToken} from "../src/EventToken.sol";
 import {FundingManager} from "../src/FundingManager.sol";
 import {DynamicFeeHook} from "../src/DynamicFeeHook.sol";
 import {MockERC20} from "v4-periphery/lib/v4-core/lib/solmate/src/test/utils/mocks/MockERC20.sol";
-import {Deployers} from "@uniswap/v4-core/test/utils/Deployers.sol";
-import {Hooks} from "v4-core/libraries/Hooks.sol";
+import {Deployers} from "./utils/Deployers.sol";
+import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 
 /**
  * @title EventTokenTest
@@ -15,11 +15,13 @@ import {Hooks} from "v4-core/libraries/Hooks.sol";
  * @dev Tests the ERC20 token implementation and access control
  *
  * Test Coverage:
- * - Token deployment with correct parameters
- * - Minting functionality and access control
+ * - Token deployment with correct parameters (140% cap)
+ * - Minting functionality and access control (only FundingManager)
  * - Transfer operations between users
  * - Balance and supply management
  * - Integration with FundingManager
+ * - Decimal handling (18 decimals)
+ * - Supply cap enforcement
  *
  * Test Flow:
  * 1. Deploy EventToken through FundingManager
@@ -81,7 +83,8 @@ contract EventTokenTest is Test, Deployers {
         mockUSDC = new MockERC20("Mock USDC", "USDC", 6);
 
         // Deploy PoolManager and routers first
-        deployFreshManagerAndRouters();
+        //deployFreshManagerAndRouters();
+        deployArtifacts();
 
         // Deploy FundingManager with MockUSDC and real PoolManager
         address mockProtocolWallet = address(0x456);
@@ -90,7 +93,7 @@ contract EventTokenTest is Test, Deployers {
         uint160 flags = uint160(Hooks.AFTER_SWAP_FLAG);
         deployCodeTo(
             "DynamicFeeHook.sol",
-            abi.encode(manager, address(this)), // Test contract as authorized caller
+            abi.encode(poolManager, address(this)), // Test contract as authorized caller
             address(flags)
         );
         DynamicFeeHook dynamicFeeHook = DynamicFeeHook(address(flags));
@@ -98,9 +101,9 @@ contract EventTokenTest is Test, Deployers {
         fundingManager = new FundingManager(
             address(mockUSDC),
             mockProtocolWallet,
-            address(manager),
+            address(poolManager),
             address(dynamicFeeHook),
-            address(modifyLiquidityRouter)
+            address(positionManager)
         );
 
         // Deploy EventToken with campaign info

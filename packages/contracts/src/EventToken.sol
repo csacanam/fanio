@@ -11,10 +11,9 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
  * primary mechanism for fan engagement and value capture in the Fanio ecosystem.
  *
  * TOKENOMICS:
- * - Total Supply: 155% of the funding target
- * - Contributors: 100% of target (1:1 ratio with contribution)
- * - Pool Liquidity: 25% of target (for Uniswap V4 initial liquidity)
- * - Remaining 30%: Reserved for future pool expansion
+ * - Total Supply: 140% of the funding target
+ * - Contributors: 120% of target (1:1 ratio with contribution, up to 20% over target)
+ * - Pool Liquidity: 20% of target (for Uniswap V4 initial liquidity)
  *
  * SECURITY FEATURES:
  * - Capped supply prevents inflation
@@ -53,12 +52,12 @@ contract EventToken is ERC20Capped {
      *
      * @param _name Human-readable token name (e.g., "Bad Bunny NY 2025")
      * @param _symbol Short token symbol (e.g., "BBNY25")
-     * @param _cap Maximum total supply (155% of funding target)
+     * @param _cap Maximum total supply (140% of funding target)
      * @param _fundingManager Address of the FundingManager contract
      * @param _decimals Number of decimal places for the token (e.g., 18, 6, 12)
      *
      * @notice Token name and symbol should be descriptive of the specific event
-     * @notice Cap is calculated as: targetAmount * 155 / 100
+     * @notice Cap is calculated as: targetAmount * 140 / 100
      * @notice FundingManager address is immutable and cannot be changed
      * @notice Token is immediately ready for minting by FundingManager
      * @notice Decimals can be customized for different use cases and networks
@@ -94,8 +93,8 @@ contract EventToken is ERC20Capped {
      * ensuring controlled supply and maintaining tokenomics integrity.
      *
      * MINTING SCENARIOS:
-     * 1. Contributor tokens: Minted 1:1 with contribution amount
-     * 2. Pool tokens: Minted for Uniswap V4 initial liquidity (25% of target)
+     * 1. Contributor tokens: Minted 1:1 with contribution amount (up to 120% of target)
+     * 2. Pool tokens: Minted for Uniswap V4 initial liquidity (20% of target)
      *
      * @param to Recipient address for the minted tokens
      * @param amount Number of tokens to mint
@@ -139,53 +138,3 @@ contract EventToken is ERC20Capped {
         return _customDecimals;
     }
 }
-
-// ========================================
-// BUSINESS LOGIC & TOKENOMICS
-// ========================================
-/*
- * EVENT TOKEN OVERVIEW:
- *
- * PURPOSE:
- * Each EventToken represents ownership shares in a specific live event,
- * enabling fans to participate in event funding and capture value from
- * successful events.
- *
- * TOKEN SUPPLY BREAKDOWN (155% of funding target):
- *
- * 1. CONTRIBUTOR TOKENS (100% of target):
- *    - Minted 1:1 with contribution amount
- *    - Example: $100 USDC contribution = 100 EventTokens
- *    - Distributed immediately upon contribution
- *    - Represents direct ownership in the event
- *
- * 2. POOL LIQUIDITY TOKENS (25% of target):
- *    - Minted during funding finalization
- *    - Reserved for Uniswap V4 initial liquidity
- *    - Enables secondary market trading
- *    - Example: $100k target = 25k pool tokens
- *
- * 3. REMAINING SUPPLY (30% of target):
- *    - Available for future pool expansion
- *    - Can be used for additional liquidity
- *    - Maintains price stability
- *
- * MINTING CONTROL:
- * - Only FundingManager can mint tokens
- * - Prevents unauthorized token creation
- * - Maintains supply cap integrity
- * - Ensures controlled distribution
- *
- * USE CASES:
- * - Early access to event tickets
- * - Voting on event decisions (setlist, venue, etc.)
- * - Trading on secondary markets
- * - Event-specific perks and benefits
- * - Proof of participation and support
- *
- * SECURITY FEATURES:
- * - Immutable FUNDING_MANAGER address
- * - Supply cap enforcement
- * - OpenZeppelin ERC20Capped security
- * - Controlled minting access
- */

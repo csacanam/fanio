@@ -6,7 +6,7 @@ import {FundingManager} from "../src/FundingManager.sol";
 import {EventToken} from "../src/EventToken.sol";
 import {DynamicFeeHook} from "../src/DynamicFeeHook.sol";
 import {MockERC20} from "v4-periphery/lib/v4-core/lib/solmate/src/test/utils/mocks/MockERC20.sol";
-import {Deployers} from "@uniswap/v4-core/test/utils/Deployers.sol";
+import {Deployers} from "./utils/Deployers.sol";
 import {Hooks} from "v4-core/libraries/Hooks.sol";
 import {PoolKey} from "v4-core/types/PoolKey.sol";
 import {Currency} from "v4-core/types/Currency.sol";
@@ -20,11 +20,12 @@ import {PoolId} from "v4-core/types/PoolId.sol";
  *
  * Test Coverage:
  * - Campaign creation and validation
- * - User contributions and token minting
+ * - User contributions and token minting (1:1 ratio with 20% excess)
  * - Campaign expiration handling
- * - Funding finalization and pool creation
+ * - Funding finalization and pool creation (20k USDC + 20k EventTokens)
  * - Access control and security
  * - Integration with DynamicFeeHook
+ * - Tokenomics verification (140% total supply)
  *
  * Test Flow:
  * 1. Deploy contracts with proper configuration
@@ -70,8 +71,8 @@ contract FundingManagerTest is Test, Deployers {
     /// @notice Campaign target amount (100k USDC)
     uint256 public constant TARGET_AMOUNT = 100_000e6;
 
-    /// @notice Total amount to raise including pool (130k USDC)
-    uint256 public constant TOTAL_TO_RAISE = 130_000e6;
+    /// @notice Total amount to raise including pool (120k USDC)
+    uint256 public constant TOTAL_TO_RAISE = 120_000e6;
 
     /// @notice Organizer deposit (10% of target)
     uint256 public constant ORGANIZER_DEPOSIT = 10_000e6;
@@ -96,7 +97,8 @@ contract FundingManagerTest is Test, Deployers {
         mockUSDC = new MockERC20("Mock USDC", "USDC", 6);
 
         // Deploy PoolManager and routers first
-        deployFreshManagerAndRouters();
+        //deployFreshManagerAndRouters();
+        deployArtifacts();
 
         // Deploy DynamicFeeHook with proper flags using deployCodeTo
         uint160 flags = uint160(Hooks.AFTER_SWAP_FLAG);
@@ -104,7 +106,7 @@ contract FundingManagerTest is Test, Deployers {
         deployCodeTo(
             "DynamicFeeHook.sol:DynamicFeeHook",
             abi.encode(
-                manager,
+                poolManager,
                 address(this) // Test contract as authorized caller for now
             ),
             hookAddress
@@ -114,9 +116,9 @@ contract FundingManagerTest is Test, Deployers {
         fundingManager = new FundingManager(
             address(mockUSDC),
             protocolWallet,
-            address(manager),
+            address(poolManager),
             hookAddress,
-            address(modifyLiquidityRouter)
+            address(positionManager)
         );
 
         // Update hook to use FundingManager as authorized caller
@@ -129,7 +131,7 @@ contract FundingManagerTest is Test, Deployers {
 
         // Give USDC to organizer and contributors
         mockUSDC.mint(organizer, TARGET_AMOUNT);
-        mockUSDC.mint(contributor1, TOTAL_TO_RAISE); // Give enough to reach total (130k)
+        mockUSDC.mint(contributor1, TOTAL_TO_RAISE); // Give enough to reach total (120k)
         mockUSDC.mint(contributor2, CONTRIBUTION_AMOUNT);
     }
 
@@ -227,7 +229,7 @@ contract FundingManagerTest is Test, Deployers {
         uint256 organizerInitialBalance = mockUSDC.balanceOf(organizer);
         uint256 protocolInitialBalance = mockUSDC.balanceOf(protocolWallet);
 
-        // Contribute full total amount (130k USDC)
+        // Contribute full total amount (120k USDC)
         vm.startPrank(contributor1);
         mockUSDC.approve(address(fundingManager), TOTAL_TO_RAISE);
         fundingManager.contribute(campaignId, TOTAL_TO_RAISE);
@@ -282,22 +284,22 @@ contract FundingManagerTest is Test, Deployers {
         uint256 totalSupply = eventToken.totalSupply();
 
         // Calculate expected total supply accounting for decimal conversion
-        // TOTAL_TO_RAISE = 130_000e6 (130k USDC) -> 130_000e18 (130k EventTokens)
-        // Pool tokens = 25% of target = 25_000e18 (25k EventTokens)
-        // Expected total = 130k + 25k = 155k EventTokens
-        uint256 expectedTotalSupply = (TOTAL_TO_RAISE * 1e12) + // Convert 130k USDC to EventTokens
-            ((TARGET_AMOUNT * 25) / 100) *
-            1e12; // Convert 25k USDC to EventTokens
+        // TOTAL_TO_RAISE = 120_000e6 (120k USDC) -> 120_000e18 (120k EventTokens)
+        // Pool tokens = 20% of target = 20_000e18 (20k EventTokens)
+        // Expected total = 120k + 20k = 140k EventTokens
+        uint256 expectedTotalSupply = (TOTAL_TO_RAISE * 1e12) + // Convert 120k USDC to EventTokens
+            ((TARGET_AMOUNT * 20) / 100) *
+            1e12; // Convert 20k USDC to EventTokens
 
         assertEq(totalSupply, expectedTotalSupply);
 
         // With pool creation enabled, pool tokens go to PoolManager
-        // Verify pool tokens are in PoolManager (25% of target, not total raised)
+        // Verify pool tokens are in PoolManager (20% of target, not total raised)
         assertApproxEqAbs(
-            eventToken.balanceOf(address(manager)),
-            ((TARGET_AMOUNT * 25) / 100) * 1e12,
+            eventToken.balanceOf(address(poolManager)),
+            ((TARGET_AMOUNT * 20) / 100) * 1e12,
             2e18, // ±2 token tolerance due to Uniswap V4 math
-            "Pool should have ~25k EventTokens"
+            "Pool should have ~20k EventTokens"
         );
 
         // Verify contributor1 received tokens (1:1 ratio with contribution)

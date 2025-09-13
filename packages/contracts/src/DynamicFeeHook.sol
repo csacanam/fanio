@@ -15,8 +15,24 @@ import {SwapParams} from "v4-core/types/PoolOperation.sol";
  * @title DynamicFeeHook
  * @notice Uniswap V4 hook that implements dynamic fees for Fanio event token trading
  * @dev Applies different fee rates for buying vs selling event tokens:
- *      - Buy EventToken: 0.01% cheaper (encourages participation)
- *      - Sell EventToken: 0.1% more expensive (discourages early exit)
+ *      - Buy EventToken: 1% fee (encourages participation from true fans)
+ *      - Sell EventToken: 10% fee (discourages early exit and speculation)
+ *
+ * PURPOSE:
+ * This hook implements a dynamic fee structure that aligns incentives with the
+ * Fanio ecosystem goals. By making it cheaper to buy EventTokens and more
+ * expensive to sell them, we encourage long-term participation and discourage
+ * short-term speculation.
+ *
+ * FEE STRUCTURE:
+ * - Buy EventToken: 1% LP fee (100 basis points)
+ * - Sell EventToken: 10% LP fee (1000 basis points)
+ *
+ * SECURITY:
+ * - Only authorized caller can configure EventTokens
+ * - Immutable hook permissions prevent unauthorized modifications
+ * - Precise buy/sell detection using configured EventToken addresses
+ *
  * @author Fanio Team
  */
 contract DynamicFeeHook is BaseHook {
@@ -33,6 +49,8 @@ contract DynamicFeeHook is BaseHook {
      * @notice Deploy the hook with an authorized caller
      * @param _manager The Uniswap V4 PoolManager contract
      * @param _authorizedCaller Address that can configure EventTokens (usually FundingManager)
+     * @dev The authorized caller is typically the FundingManager contract
+     * @dev This address can configure which token is the EventToken for each pool
      */
     constructor(
         IPoolManager _manager,
@@ -46,6 +64,8 @@ contract DynamicFeeHook is BaseHook {
      * @param key The pool key to configure
      * @param eventToken Address of the EventToken in this pool
      * @dev Only the authorized caller can configure pools
+     * @dev This is essential for determining buy vs sell direction
+     * @dev Must be called before the pool can use dynamic fees
      */
     function setEventToken(PoolKey calldata key, address eventToken) external {
         require(msg.sender == authorizedCaller, "Unauthorized");
@@ -57,9 +77,12 @@ contract DynamicFeeHook is BaseHook {
      * @notice Transfer authorization to a new address
      * @param newCaller New authorized caller address
      * @dev Only current authorized caller can transfer authorization
+     * @dev Useful for upgrading the FundingManager contract
+     * @dev Zero address is not allowed for security
      */
     function setAuthorizedCaller(address newCaller) external {
         require(msg.sender == authorizedCaller, "Unauthorized");
+        require(newCaller != address(0), "Invalid caller address");
         authorizedCaller = newCaller;
     }
 
@@ -67,6 +90,8 @@ contract DynamicFeeHook is BaseHook {
      * @notice Define which hook functions this contract implements
      * @return permissions Struct indicating which hooks are enabled
      * @dev Only afterSwap is enabled for dynamic fee implementation
+     * @dev This is required by Uniswap V4 hook system
+     * @dev Other hooks are disabled to minimize gas costs and complexity
      */
     function getHookPermissions()
         public
@@ -100,6 +125,9 @@ contract DynamicFeeHook is BaseHook {
      * @return selector The function selector to confirm hook execution
      * @return feeOverride LP fee override in basis points (1 bp = 0.01%)
      * @dev Determines if user is buying or selling EventToken and applies appropriate fee
+     * @dev Buy EventToken: 1% fee (100 basis points)
+     * @dev Sell EventToken: 10% fee (1000 basis points)
+     * @dev This is the core function that implements the dynamic fee logic
      */
     function _afterSwap(
         address /* sender */,
@@ -119,6 +147,9 @@ contract DynamicFeeHook is BaseHook {
      * @param delta Balance changes from the swap
      * @return true if buying EventToken, false if selling EventToken
      * @dev Uses the configured EventToken address to precisely detect buy vs sell
+     * @dev Buy = receiving EventToken (positive delta for EventToken)
+     * @dev Sell = giving EventToken (negative delta for EventToken)
+     * @dev Works regardless of whether EventToken is currency0 or currency1
      */
     function _isBuySwap(
         PoolKey calldata key,
@@ -145,8 +176,10 @@ contract DynamicFeeHook is BaseHook {
      * @notice Calculate the dynamic fee override
      * @param isBuy True if buying EventToken, false if selling
      * @return fee LP fee override in basis points (1 bp = 0.01%)
-     *         - Buy: 100 bp (1% - entry fee for true fans only)
-     *         - Sell: 1000 bp (10% - strong deterrent against speculation)
+     * @dev Buy: 100 bp (1% - encourages participation from true fans)
+     * @dev Sell: 1000 bp (10% - strong deterrent against speculation and early exit)
+     * @dev These fees are applied on top of the base pool fee
+     * @dev The fee structure aligns with Fanio's long-term participation goals
      */
     function _calculateDynamicFee(bool isBuy) internal pure returns (int128) {
         return isBuy ? int128(100) : int128(1000);

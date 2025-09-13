@@ -14,31 +14,14 @@ import {PoolKey} from "v4-core/types/PoolKey.sol";
 import {Currency, CurrencyLibrary} from "v4-core/types/Currency.sol";
 import {TickMath} from "v4-core/libraries/TickMath.sol";
 import {LPFeeLibrary} from "v4-core/libraries/LPFeeLibrary.sol";
-import {ModifyLiquidityParams} from "v4-core/types/PoolOperation.sol";
 import {LiquidityAmounts} from "v4-periphery/src/libraries/LiquidityAmounts.sol";
+import {IPositionManager} from "v4-periphery/src/interfaces/IPositionManager.sol";
+import {IPermit2} from "permit2/src/interfaces/IPermit2.sol";
+import {Actions} from "v4-periphery/src/libraries/Actions.sol";
+import {PoolLib} from "./libraries/PoolLib.sol";
+import {TokenLib} from "./libraries/TokenLib.sol";
+import {CampaignLib} from "./libraries/CampaignLib.sol";
 
-/**
- * @title IModifyLiquidityRouter
- * @dev Interface for Uniswap V4 ModifyLiquidityRouter contract
- * 
- * This interface allows the FundingManager to interact with Uniswap V4's
- * liquidity management system without importing test dependencies.
- * 
- * @notice This is a production-ready interface for Uniswap V4 periphery contracts
- */
-interface IModifyLiquidityRouter {
-    /**
-     * @dev Add or remove liquidity from a Uniswap V4 pool
-     * @param key PoolKey identifying the pool
-     * @param params Parameters for liquidity modification
-     * @param hookData Additional data for hook callbacks
-     */
-    function modifyLiquidity(
-        PoolKey memory key,
-        ModifyLiquidityParams memory params,
-        bytes memory hookData
-    ) external;
-}
 /**
  * @title FundingManager
  * @dev Trustless crowdfunding platform for live events powered by Uniswap v4 hooks
@@ -61,6 +44,9 @@ interface IModifyLiquidityRouter {
  * @notice This is the core contract for the Fanio platform
  */
 contract FundingManager is ReentrancyGuard {
+
+    using CurrencyLibrary for Currency;
+
     // ========================================
     // IMMUTABLE STATE VARIABLES
     // ========================================
@@ -74,8 +60,10 @@ contract FundingManager is ReentrancyGuard {
     /// @notice Uniswap V4 PoolManager contract
     IPoolManager public immutable poolManager;
 
-    /// @notice Uniswap V4 ModifyLiquidityRouter contract
-    IModifyLiquidityRouter public immutable modifyLiquidityRouter;
+    /// @notice IPositionManager interface
+    IPositionManager immutable positionManager;
+
+    IPermit2 immutable PERMIT2 = IPermit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
 
     /// @notice DynamicFeeHook contract for pool fees
     DynamicFeeHook public immutable dynamicFeeHook;
@@ -232,6 +220,7 @@ contract FundingManager is ReentrancyGuard {
         uint256 amount
     );
 
+
     // ========================================
     // CONSTRUCTOR
     // ========================================
@@ -243,7 +232,6 @@ contract FundingManager is ReentrancyGuard {
      * @param protocolWallet Address where protocol fees will be collected
      * @param _poolManager Uniswap V4 PoolManager contract for pool operations
      * @param _dynamicFeeHook DynamicFeeHook contract for dynamic trading fees
-     * @param _modifyLiquidityRouter Uniswap V4 ModifyLiquidityRouter for liquidity management
      *
      * @notice All parameters are immutable and cannot be changed after deployment
      * @notice The defaultFundingToken is used when campaigns don't specify a custom token
@@ -255,19 +243,18 @@ contract FundingManager is ReentrancyGuard {
         address protocolWallet,
         address _poolManager,
         address _dynamicFeeHook,
-        address _modifyLiquidityRouter
+        address _positionManager
     ) {
         require(defaultFundingToken != address(0), "Invalid funding token");
         require(protocolWallet != address(0), "Invalid protocol wallet");
         require(_poolManager != address(0), "Invalid pool manager");
         require(_dynamicFeeHook != address(0), "Invalid dynamic fee hook");
-        require(_modifyLiquidityRouter != address(0), "Invalid modify liquidity router");
 
         DEFAULT_FUNDING_TOKEN = IERC20(defaultFundingToken);
         PROTOCOL_WALLET = protocolWallet;
         poolManager = IPoolManager(_poolManager);
         dynamicFeeHook = DynamicFeeHook(_dynamicFeeHook);
-        modifyLiquidityRouter = IModifyLiquidityRouter(_modifyLiquidityRouter);
+        positionManager = IPositionManager(_positionManager);
     }
 
     // ========================================
@@ -306,18 +293,13 @@ contract FundingManager is ReentrancyGuard {
         uint256 durationDays,
         address fundingToken
     ) external returns (uint256 campaignId) {
-        require(targetAmount > 0, "Target amount must be positive");
-        require(durationDays > 0, "Duration must be positive");
+        require(CampaignLib.validateCampaignParams(targetAmount, durationDays), "Invalid campaign parameters");
 
-        // Calculate required deposit (10% of target)
-        uint256 requiredDeposit = targetAmount / 10; // 10%
-
-        // Use custom funding token or default
+        uint256 requiredDeposit = CampaignLib.calculateRequiredDeposit(targetAmount, 10);
         IERC20 tokenToUse = fundingToken == address(0)
             ? DEFAULT_FUNDING_TOKEN
             : IERC20(fundingToken);
 
-        // Transfer tokens from organizer to contract
         require(
             tokenToUse.transferFrom(msg.sender, address(this), requiredDeposit),
             "Deposit transfer failed"
@@ -325,12 +307,7 @@ contract FundingManager is ReentrancyGuard {
 
         campaignId = nextCampaignId++;
         uint256 deadline = block.timestamp + (durationDays * 1 days);
-
-        // Calculate cap: 155% of target amount, accounting for decimal differences
-        uint256 cap = _calculateTokenCap(targetAmount, address(tokenToUse), 18); // EventToken will use 18 decimals
-
-        // Deploy EventToken with FundingManager address
-        // Use 18 decimals by default for compatibility with most networks
+        uint256 cap = TokenLib.calculateTokenCap(targetAmount, address(tokenToUse), 18);
         EventToken eventToken = new EventToken(
             tokenName,
             tokenSymbol,
@@ -339,7 +316,6 @@ contract FundingManager is ReentrancyGuard {
             18 // Default decimals for EventToken
         );
 
-        // Create campaign
         campaigns[campaignId] = EventCampaign({
             eventToken: address(eventToken),
             organizer: msg.sender,
@@ -350,7 +326,6 @@ contract FundingManager is ReentrancyGuard {
             deadline: deadline,
             isActive: true,
             isFunded: false,
-            // 💰 Initialize accountability fields
             protocolFeesCollected: 0,
             uniqueBackers: 0
         });
@@ -400,75 +375,38 @@ contract FundingManager is ReentrancyGuard {
     ) external nonReentrant {
         EventCampaign storage campaign = campaigns[campaignId];
 
-        // Check and update campaign status before processing
         _checkCampaignStatus(campaignId);
-
-        // Verify campaign is still active after status check
         require(campaign.isActive, "Campaign is not active");
-
         require(amount > 0, "Amount must be positive");
         require(!campaign.isFunded, "Campaign already funded");
-
-        // Validate that contribution doesn't exceed maximum allowed amount (target + 30% for pool)
+        uint256 maxAllowed = CampaignLib.calculateCampaignGoal(campaign.targetAmount, 20);
         require(
-            campaign.raisedAmount + amount <=
-                campaign.targetAmount + (campaign.targetAmount * 30) / 100,
+            !CampaignLib.wouldExceedMaxAmount(campaign.raisedAmount, amount, maxAllowed),
             "Contribution would exceed maximum allowed amount"
         );
 
-        // Transfer tokens from contributor using campaign's funding token
         IERC20 campaignToken = IERC20(campaign.fundingToken);
         require(
             campaignToken.transferFrom(msg.sender, address(this), amount),
             "Transfer failed"
         );
 
-        // Register contribution
         campaign.raisedAmount += amount;
         userContributions[msg.sender][campaignId] += amount;
-
-        // Increment unique backers count if this is the first contribution from this address
         if (userContributions[msg.sender][campaignId] == amount) {
             campaign.uniqueBackers++;
         }
 
-        // Mint tokens immediately to contributor (1:1 ratio with decimal adjustment)
         EventToken eventToken = EventToken(campaign.eventToken);
         uint256 tokenDecimals = eventToken.decimals();
-
-        // Get funding token decimals dynamically by calling decimals() on the token contract
-        // This makes it completely generic for any ERC20 token (6, 18, or any other decimals)
-        uint256 fundingTokenDecimals;
-        try IERC20Metadata(campaign.fundingToken).decimals() returns (
-            uint8 decimals
-        ) {
-            fundingTokenDecimals = decimals;
-        } catch {
-            // Fallback: if we can't get decimals, assume 18 (most common for ERC20)
-            fundingTokenDecimals = 18;
-        }
-
-        // Adjust for decimal difference between funding token and event token
-        uint256 userTokens;
-        if (tokenDecimals > fundingTokenDecimals) {
-            // Event token has more decimals, multiply by the difference
-            uint256 multiplier = 10 ** (tokenDecimals - fundingTokenDecimals);
-            userTokens = amount * multiplier;
-        } else {
-            // Event token has fewer decimals, divide by the difference
-            uint256 divisor = 10 ** (fundingTokenDecimals - tokenDecimals);
-            userTokens = amount / divisor;
-        }
+        uint256 fundingTokenDecimals = TokenLib.safeDecimals(campaign.fundingToken);
+        uint256 userTokens = TokenLib.calculateUserTokens(amount, fundingTokenDecimals, tokenDecimals);
 
         eventToken.mint(msg.sender, userTokens);
 
         emit ContributionMade(campaignId, msg.sender, amount, userTokens);
 
-        // Check if funding target is reached (campaign closes when organizer goal + pool amount is reached)
-        // Organizer wants targetAmount (100 USDC) + 30% for pool = 130 USDC total
-        uint256 campaignGoal = campaign.targetAmount +
-            (campaign.targetAmount * 30) /
-            100;
+        uint256 campaignGoal = CampaignLib.calculateCampaignGoal(campaign.targetAmount, 20);
         if (campaign.raisedAmount >= campaignGoal) {
             _finalizeFunding(campaignId);
         }
@@ -504,18 +442,12 @@ contract FundingManager is ReentrancyGuard {
         campaign.isFunded = true;
         campaign.isActive = false;
 
-        // 1. Mint pool tokens (25% of target for initial liquidity)
         EventToken eventToken = EventToken(campaign.eventToken);
-
-        // Convert pool tokens from funding token units to event token units
-        // This ensures consistency with the token minting logic in contribute()
-        uint256 poolTokensInFundingUnits = (campaign.targetAmount * 25) / 100;
-
-        // Get EventToken decimals dynamically
+        uint256 poolTokensInFundingUnits = CampaignLib.calculatePercentage(campaign.targetAmount, 20);
         EventToken eventTokenContract = EventToken(campaign.eventToken);
         uint8 eventTokenDecimals = eventTokenContract.decimals();
 
-        uint256 poolTokens = _convertToEventTokenUnits(
+        uint256 poolTokens = TokenLib.convertToEventTokenUnits(
             poolTokensInFundingUnits,
             campaign.fundingToken,
             eventTokenDecimals
@@ -525,31 +457,26 @@ contract FundingManager is ReentrancyGuard {
 
         emit TokensMinted(campaignId, poolTokens);
 
-        // 2. Pay protocol fee (10% of target - from organizer deposit)
         uint256 protocolFee = campaign.organizerDeposit;
         IERC20 campaignToken = IERC20(campaign.fundingToken);
 
         campaignToken.transfer(PROTOCOL_WALLET, protocolFee);
         emit ProtocolFeePaid(campaignId, protocolFee);
 
-        // 3. Send funds to organizer (100% of target)
         campaignToken.transfer(campaign.organizer, campaign.targetAmount);
         emit OrganizerFundsSent(
             campaignId,
             campaign.organizer,
             campaign.targetAmount
         );
-
-        // 4. Pool data is now stored in EventCampaign struct
-
-        // 💰 Update accountability fields
         campaign.protocolFeesCollected = protocolFee;
 
         emit CampaignFunded(campaignId, campaign.raisedAmount);
 
         if (address(dynamicFeeHook) != address(0)) {
-            uint256 fundingAmount = (campaign.targetAmount * 30) / 100; // 30% of target
+            uint256 fundingAmount = CampaignLib.calculatePercentage(campaign.targetAmount, 20); // 20k USDC for pool
             uint256 tokenAmount = IERC20(campaign.eventToken).balanceOf(address(this)); // poolTokens already minted
+            
             
             _initializeHookPool(campaignId, fundingAmount, tokenAmount);
         }
@@ -559,8 +486,6 @@ contract FundingManager is ReentrancyGuard {
     // UNISWAP V4 POOL CREATION
     // ========================================
 
-    // Pool creation is now handled by the hook in afterInitialize
-    // This section has been simplified to just transfer tokens and initialize pool
 
     /**
      * @dev Close an expired campaign that didn't reach its funding goal
@@ -592,14 +517,11 @@ contract FundingManager is ReentrancyGuard {
     function closeExpiredCampaign(uint256 campaignId) external {
         EventCampaign storage campaign = campaigns[campaignId];
 
-        // Verify campaign is expired and not funded
         require(
-            block.timestamp >= campaign.deadline,
+            CampaignLib.isExpired(campaign.deadline, block.timestamp),
             "Campaign not expired yet"
         );
         require(!campaign.isFunded, "Campaign already funded");
-
-        // Use unified logic to close the campaign
         _checkCampaignStatus(campaignId);
 
         // TODO: Implement refund logic for contributors
@@ -637,9 +559,8 @@ contract FundingManager is ReentrancyGuard {
     function _checkCampaignStatus(uint256 campaignId) internal {
         EventCampaign storage campaign = campaigns[campaignId];
 
-        // Check if campaign has expired and close it if necessary
         if (
-            block.timestamp >= campaign.deadline &&
+            CampaignLib.isExpired(campaign.deadline, block.timestamp) &&
             campaign.isActive &&
             !campaign.isFunded
         ) {
@@ -692,11 +613,9 @@ contract FundingManager is ReentrancyGuard {
         EventCampaign storage campaign = campaigns[campaignId];
 
         isActive = campaign.isActive;
-        isExpired = block.timestamp >= campaign.deadline;
+        isExpired = CampaignLib.isExpired(campaign.deadline, block.timestamp);
         isFunded = campaign.isFunded;
-        timeLeft = block.timestamp >= campaign.deadline
-            ? 0
-            : campaign.deadline - block.timestamp;
+        timeLeft = CampaignLib.timeLeft(campaign.deadline, block.timestamp);
         raisedAmount = campaign.raisedAmount;
         targetAmount = campaign.targetAmount;
         organizerDeposit = campaign.organizerDeposit;
@@ -730,7 +649,7 @@ contract FundingManager is ReentrancyGuard {
         uint256 campaignId
     ) external view returns (uint256) {
         EventCampaign storage campaign = campaigns[campaignId];
-        return campaign.targetAmount + (campaign.targetAmount * 30) / 100;
+        return CampaignLib.calculateCampaignGoal(campaign.targetAmount, 30);
     }
 
     /**
@@ -745,67 +664,7 @@ contract FundingManager is ReentrancyGuard {
         return campaigns[campaignId].eventToken;
     }
 
-    /**
-     * @dev Calculate the token cap accounting for decimal differences
-     *
-     * @param targetAmount Target amount in funding token units
-     * @param fundingToken Address of the funding token
-     * @param eventTokenDecimals Number of decimals for the EventToken
-     * @return Cap amount in event token units (155% of target)
-     *
-     * @notice This function converts the target amount from funding token units
-     * to event token units, accounting for decimal differences
-     */
-    function _calculateTokenCap(
-        uint256 targetAmount,
-        address fundingToken,
-        uint8 eventTokenDecimals
-    ) internal view returns (uint256) {
-        // Get decimals dynamically from funding token
-        uint256 fundingTokenDecimals = IERC20Metadata(fundingToken).decimals();
 
-        // Convert targetAmount from funding token units to event token units
-        uint256 targetInEventTokenUnits;
-        if (eventTokenDecimals > fundingTokenDecimals) {
-            // Event token has more decimals, multiply by the difference
-            uint256 multiplier = 10 **
-                (eventTokenDecimals - fundingTokenDecimals);
-            targetInEventTokenUnits = targetAmount * multiplier;
-        } else {
-            // Event token has fewer decimals, divide by the difference
-            uint256 divisor = 10 ** (fundingTokenDecimals - eventTokenDecimals);
-            targetInEventTokenUnits = targetAmount / divisor;
-        }
-
-        // Calculate cap: 155% of target in event token units
-        return (targetInEventTokenUnits * 155) / 100;
-    }
-
-    /**
-     * @dev Transfer tokens to hook for pool creation
-     * @param campaignId ID of the campaign
-     * @param fundingAmount Amount of funding tokens
-     * @param tokenAmount Amount of event tokens
-     * 
-     * @notice TEMPORARILY DISABLED FOR DEMO - Hook not yet functional
-     */
-    function _transferTokensToHook(
-        uint256 campaignId,
-        uint256 fundingAmount,
-        uint256 tokenAmount
-    ) internal {
-        // TODO: Hook token transfer temporarily disabled for demo
-        // EventCampaign storage campaign = campaigns[campaignId];
-        
-        // // Transfer funding tokens to hook
-        // IERC20(campaign.fundingToken).transfer(fanioHook, fundingAmount);
-        
-        // // Transfer event tokens to hook
-        // IERC20(campaign.eventToken).transfer(fanioHook, tokenAmount);
-        
-        // // Emit event
-        // emit TokensTransferredToHook(campaignId, fanioHook, fundingAmount, tokenAmount);
-    }
 
     /**
      * @dev Initialize Uniswap V4 pool with DynamicFeeHook and add initial liquidity
@@ -834,33 +693,18 @@ contract FundingManager is ReentrancyGuard {
         uint256 fundingAmount,
         uint256 tokenAmount
     ) internal {
-        EventCampaign storage campaign = campaigns[campaignId];
-        
-        // Create PoolKey with DYNAMIC fees (hook-controlled fees)
-        // Currency ordering: lower address becomes currency0, higher becomes currency1
-        PoolKey memory key = PoolKey({
-            currency0: Currency.wrap(
-                campaign.fundingToken < campaign.eventToken ? 
-                    campaign.fundingToken : campaign.eventToken
-            ),
-            currency1: Currency.wrap(
-                campaign.fundingToken < campaign.eventToken ? 
-                    campaign.eventToken : campaign.fundingToken
-            ),
-            fee: LPFeeLibrary.DYNAMIC_FEE_FLAG,  // Hook controls fees: 1% buy, 10% sell
-            tickSpacing: 60,                     // Standard tick spacing for most pools
-            hooks: IHooks(address(dynamicFeeHook)) // Our custom fee hook
-        });
 
-        // Configure hook BEFORE initializing pool
+
+        
+        EventCampaign storage campaign = campaigns[campaignId];
+
+        PoolLib.Context memory pc = PoolLib.build(campaign.fundingToken, campaign.eventToken);
+
+        
+        PoolKey memory key = PoolLib.createPoolKey(pc.token0, pc.token1, address(dynamicFeeHook));
+
         dynamicFeeHook.setEventToken(key, campaign.eventToken);
-        
-        // Initialize pool with 1.2:1 price (same as your test)
-        uint160 sqrtPriceX96 = TickMath.getSqrtPriceAtTick(274500); // 1.2:1 price
-        poolManager.initialize(key, sqrtPriceX96);
-        
-        // Add initial liquidity (25% of total supply goes to pool)
-        _addInitialLiquidity(key, campaign, fundingAmount, tokenAmount);
+        _addInitialLiquidity(key, pc,campaign, fundingAmount, tokenAmount);
         
         emit PoolInitialized(campaignId, address(poolManager), key);
     }
@@ -879,7 +723,7 @@ contract FundingManager is ReentrancyGuard {
      * 4. Creates ModifyLiquidityParams for full range liquidity
      * 5. Calls ModifyLiquidityRouter to add liquidity to pool
      * 
-     * @param key PoolKey identifying the pool to add liquidity to
+     * @param pc PoolLib.Context 
      * @param campaign Campaign data containing token addresses
      * @param fundingAmount Amount of funding tokens to add (30% of target)
      * @param tokenAmount Amount of EventTokens to add (25% of target)
@@ -890,93 +734,68 @@ contract FundingManager is ReentrancyGuard {
      */
     function _addInitialLiquidity(
         PoolKey memory key,
+        PoolLib.Context memory pc,
         EventCampaign storage campaign,
         uint256 fundingAmount,
         uint256 tokenAmount
     ) internal {
-        // Step 1: Approve tokens to ModifyLiquidityRouter
-        IERC20(campaign.fundingToken).approve(address(modifyLiquidityRouter), fundingAmount);
-        IERC20(campaign.eventToken).approve(address(modifyLiquidityRouter), tokenAmount);
+
         
-        // Step 2: Calculate optimal liquidity for full range
-        uint160 sqrtPriceX96 = TickMath.getSqrtPriceAtTick(274500); // Current price (1.2:1)
-        uint160 sqrtLower = TickMath.getSqrtPriceAtTick(-887220);   // Full range lower bound
-        uint160 sqrtUpper = TickMath.getSqrtPriceAtTick(887220);    // Full range upper bound
         
-        // Step 3: Determine token ordering (currency0 vs currency1)
-        bool fundingIsCurrency0 = Currency.unwrap(key.currency0) == campaign.fundingToken;
-        uint256 amount0 = fundingIsCurrency0 ? fundingAmount : tokenAmount;
-        uint256 amount1 = fundingIsCurrency0 ? tokenAmount : fundingAmount;
         
-        // Step 4: Calculate liquidity using Uniswap V4 LiquidityAmounts library
-        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
+        int24 tickLower = -887220;
+        int24 tickUpper = 887220;
+        
+        uint160 sqrtLower = TickMath.getSqrtPriceAtTick(tickLower);
+        uint160 sqrtUpper = TickMath.getSqrtPriceAtTick(tickUpper);
+        
+        
+
+
+        (uint256 amount0, uint256 amount1) = PoolLib.mapAmounts(pc, fundingAmount, tokenAmount);
+
+        uint160 sqrtPriceX96 = PoolLib.sqrtPriceX96FromPrice(1, 1, pc.dec0, pc.dec1);
+        uint128 liquidity = PoolLib.calculateLiquidity(
             sqrtPriceX96, sqrtLower, sqrtUpper, amount0, amount1
         );
-        
-        // Step 5: Create parameters for full range liquidity addition
-        ModifyLiquidityParams memory params = ModifyLiquidityParams({
-            tickLower: -887220,  // Full range lower tick
-            tickUpper: 887220,   // Full range upper tick
-            liquidityDelta: int256(uint256(liquidity)), // Amount of liquidity to add
-            salt: 0              // Salt for position uniqueness
-        });
-        
-        // Step 6: Add liquidity to the pool via ModifyLiquidityRouter
-        modifyLiquidityRouter.modifyLiquidity(key, params, "");
-    }
 
-    /**
-     * @dev Convert funding token units to event token units
-     *
-     * @param amount Amount in funding token units
-     * @param fundingToken Address of the funding token
-     * @param eventTokenDecimals Number of decimals for the EventToken
-     * @return Amount in event token units
-     *
-     * @notice This function converts amounts from funding token units to event token units
-     * accounting for decimal differences, ensuring consistency across all token operations
-     */
-    function _convertToEventTokenUnits(
-        uint256 amount,
-        address fundingToken,
-        uint8 eventTokenDecimals
-    ) internal view returns (uint256) {
-        // Get decimals dynamically from funding token
-        uint256 fundingTokenDecimals = IERC20Metadata(fundingToken).decimals();
 
-        // Convert amount from funding token units to event token units
-        if (eventTokenDecimals > fundingTokenDecimals) {
-            // Event token has more decimals, multiply by the difference
-            uint256 multiplier = 10 **
-                (eventTokenDecimals - fundingTokenDecimals);
-            return amount * multiplier;
-        } else {
-            // Event token has fewer decimals, divide by the difference
-            uint256 divisor = 10 ** (fundingTokenDecimals - eventTokenDecimals);
-            return amount / divisor;
+        uint256 amount0Max = amount0 + (amount0 / 1000) + 1; // +0.1% + 1
+        uint256 amount1Max = amount1 + (amount1 / 1000) + 1;
+        
+        
+        bytes memory hookData = new bytes(0);
+        (bytes memory actions, bytes[] memory mintParams) = PoolLib.mintLiquidityParams(
+            key, tickLower, tickUpper, liquidity, amount0Max, amount1Max, address(this), hookData
+        );
+
+
+        bytes[] memory params = new bytes[](2);
+        params[0] = abi.encodeWithSelector(positionManager.initializePool.selector, key, sqrtPriceX96, new bytes(0));
+        params[1] = abi.encodeWithSelector(
+            positionManager.modifyLiquidities.selector, abi.encode(actions, mintParams), block.timestamp + 3600
+        );
+
+        PoolLib.approveTokens(campaign.fundingToken, campaign.eventToken, PERMIT2, positionManager);
+
+        uint256 valueToPass = key.currency0.isAddressZero() ? amount0 : 0;
+
+        try positionManager.multicall{value: valueToPass}(params) {
+            // Pool created and liquidity added successfully
+        } catch (bytes memory reason) {
+            revert(string(reason));
         }
+
     }
+
+
+
 }
 
 // ========================================
 // EVENTS
 // ========================================
 
-// Event removed - liquidity is now handled by the hook
-
-/**
- * @dev Emitted when tokens are transferred to hook for pool creation
- * @param campaignId ID of the campaign
- * @param hook Address of the hook
- * @param fundingAmount Amount of funding tokens transferred
- * @param tokenAmount Amount of event tokens transferred
- */
-event TokensTransferredToHook(
-    uint256 indexed campaignId,
-    address indexed hook,
-    uint256 fundingAmount,
-    uint256 tokenAmount
-);
 
 /**
  * @dev Emitted when pool is initialized
@@ -990,47 +809,3 @@ event PoolInitialized(
     PoolKey key
 );
 
-// ========================================
-// BUSINESS LOGIC & TOKENOMICS
-// ========================================
-/*
- * FUNDING FLOW OVERVIEW:
- *
- * 1. CAMPAIGN CREATION:
- *    - Organizer deposits 10% of target amount
- *    - EventToken deployed with cap = 155% of target
- *    - Campaign becomes active with deadline
- *
- * 2. CONTRIBUTION PHASE:
- *    - Fans contribute funding tokens (USDC or custom)
- *    - EventTokens minted immediately 1:1 with contribution
- *    - Campaign tracks raised amount vs target
- *
- * 3. FUNDING FINALIZATION (when target reached):
- *    - Pool tokens minted (25% of target) for Uniswap V4
- *    - Protocol fee collected (10% of target) from organizer deposit
- *    - Full target amount sent to organizer
- *    - Campaign marked as funded and inactive
- *
- * 4. POST-FUNDING:
- *    - Organizer can withdraw raised funds
- *    - Pool tokens ready for Uniswap V4 liquidity creation
- *    - Contributors hold EventTokens (1:1 with contribution)
- *
- * TOKEN DISTRIBUTION:
- * - Contributors: 130% of target (1:1 ratio with contribution, up to 30% over target)
- * - Pool: 25% of target (for initial Uniswap V4 liquidity)
- * - Total Supply: 155% of target (130% + 25%)
- *
- * FINANCIAL TRACKING:
- * - organizerDeposit: 10% of target (protocol fee if successful)
- * - raisedAmount: Total contributions received
- * - protocolFeesCollected: Fees collected (equal to organizer deposit)
- * - fundsWithdrawn: Whether organizer has withdrawn funds
- *
- * SECURITY FEATURES:
- * - ReentrancyGuard on all external functions
- * - Automatic campaign expiration handling
- * - Comprehensive balance verification
- * - Access control for organizer-only functions
- */
