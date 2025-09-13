@@ -57,6 +57,3 @@ cache/
 artifacts/
 typechain/
 typechain-types/
-
-# External templates and dependencies
-v4-template/
