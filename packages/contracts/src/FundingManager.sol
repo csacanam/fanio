@@ -693,8 +693,6 @@ contract FundingManager is ReentrancyGuard {
         uint256 fundingAmount,
         uint256 tokenAmount
     ) internal {
-
-
         
         EventCampaign storage campaign = campaigns[campaignId];
 
@@ -739,9 +737,6 @@ contract FundingManager is ReentrancyGuard {
         uint256 fundingAmount,
         uint256 tokenAmount
     ) internal {
-
-        
-        
         
         int24 tickLower = -887220;
         int24 tickUpper = 887220;
@@ -749,9 +744,6 @@ contract FundingManager is ReentrancyGuard {
         uint160 sqrtLower = TickMath.getSqrtPriceAtTick(tickLower);
         uint160 sqrtUpper = TickMath.getSqrtPriceAtTick(tickUpper);
         
-        
-
-
         (uint256 amount0, uint256 amount1) = PoolLib.mapAmounts(pc, fundingAmount, tokenAmount);
 
         uint160 sqrtPriceX96 = PoolLib.sqrtPriceX96FromPrice(1, 1, pc.dec0, pc.dec1);
@@ -759,17 +751,14 @@ contract FundingManager is ReentrancyGuard {
             sqrtPriceX96, sqrtLower, sqrtUpper, amount0, amount1
         );
 
-
         uint256 amount0Max = amount0 + (amount0 / 1000) + 1; // +0.1% + 1
         uint256 amount1Max = amount1 + (amount1 / 1000) + 1;
-        
         
         bytes memory hookData = new bytes(0);
         (bytes memory actions, bytes[] memory mintParams) = PoolLib.mintLiquidityParams(
             key, tickLower, tickUpper, liquidity, amount0Max, amount1Max, address(this), hookData
         );
-
-
+        
         bytes[] memory params = new bytes[](2);
         params[0] = abi.encodeWithSelector(positionManager.initializePool.selector, key, sqrtPriceX96, new bytes(0));
         params[1] = abi.encodeWithSelector(
