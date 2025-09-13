@@ -76,8 +76,8 @@ contract DynamicFeeHookTest is Test, Deployers {
             "EventToken should have 18 decimals"
         );
 
-        // Deploy DynamicFeeHook with AFTER_SWAP permission
-        uint160 flags = uint160(Hooks.AFTER_SWAP_FLAG);
+        // Deploy DynamicFeeHook with BEFORE_SWAP permission
+        uint160 flags = uint160(Hooks.BEFORE_SWAP_FLAG);
         deployCodeTo(
             "DynamicFeeHook.sol",
             abi.encode(manager, address(this)),

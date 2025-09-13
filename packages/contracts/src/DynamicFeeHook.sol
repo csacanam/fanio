@@ -10,6 +10,8 @@ import {PoolId, PoolIdLibrary} from "v4-core/types/PoolId.sol";
 import {Currency, CurrencyLibrary} from "v4-core/types/Currency.sol";
 import {BalanceDelta} from "v4-core/types/BalanceDelta.sol";
 import {SwapParams} from "v4-core/types/PoolOperation.sol";
+import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "v4-core/types/BeforeSwapDelta.sol";
+import {LPFeeLibrary} from "v4-core/libraries/LPFeeLibrary.sol";
 
 /**
  * @title DynamicFeeHook
@@ -107,8 +109,8 @@ contract DynamicFeeHook is BaseHook {
                 beforeRemoveLiquidity: false,
                 afterAddLiquidity: false,
                 afterRemoveLiquidity: false,
-                beforeSwap: false,
-                afterSwap: true,
+                beforeSwap: true,
+                afterSwap: false,
                 beforeDonate: false,
                 afterDonate: false,
                 beforeSwapReturnDelta: false,
@@ -118,70 +120,33 @@ contract DynamicFeeHook is BaseHook {
             });
     }
 
-    /**
-     * @notice Hook called after each swap to apply dynamic fees
-     * @param key Pool key for the swap
-     * @param delta Balance changes from the swap
-     * @return selector The function selector to confirm hook execution
-     * @return feeOverride LP fee override in basis points (1 bp = 0.01%)
-     * @dev Determines if user is buying or selling EventToken and applies appropriate fee
-     * @dev Buy EventToken: 1% fee (100 basis points)
-     * @dev Sell EventToken: 10% fee (1000 basis points)
-     * @dev This is the core function that implements the dynamic fee logic
-     */
-    function _afterSwap(
-        address /* sender */,
+    function _beforeSwap(
+        address,
         PoolKey calldata key,
-        SwapParams calldata /* params */,
-        BalanceDelta delta,
-        bytes calldata /* hookData */
-    ) internal override returns (bytes4, int128) {
-        bool isBuy = _isBuySwap(key, delta);
-        int128 feeOverride = _calculateDynamicFee(isBuy);
-        return (IHooks.afterSwap.selector, feeOverride);
-    }
+        SwapParams calldata params,
+        bytes calldata
+    ) internal override returns (bytes4, BeforeSwapDelta, uint24) {
+        require(
+            uint24(key.fee) & LPFeeLibrary.DYNAMIC_FEE_FLAG != 0,
+            "Not dynamic"
+        );
 
-    /**
-     * @notice Determine if a swap is buying or selling the EventToken
-     * @param key Pool key to check
-     * @param delta Balance changes from the swap
-     * @return true if buying EventToken, false if selling EventToken
-     * @dev Uses the configured EventToken address to precisely detect buy vs sell
-     * @dev Buy = receiving EventToken (positive delta for EventToken)
-     * @dev Sell = giving EventToken (negative delta for EventToken)
-     * @dev Works regardless of whether EventToken is currency0 or currency1
-     */
-    function _isBuySwap(
-        PoolKey calldata key,
-        BalanceDelta delta
-    ) internal view returns (bool) {
-        PoolId poolId = key.toId();
-        address eventToken = eventTokens[poolId];
-
+        address eventToken = eventTokens[key.toId()];
         require(eventToken != address(0), "Pool not configured");
 
-        address token0 = Currency.unwrap(key.currency0);
-        bool isEventToken0 = (token0 == eventToken);
+        bool isEventToken0 = (Currency.unwrap(key.currency0) == eventToken);
 
-        if (isEventToken0) {
-            // EventToken is token0: Buy = receive EventToken, pay other token
-            return delta.amount0() > 0 && delta.amount1() < 0;
-        } else {
-            // EventToken is token1: Buy = receive EventToken, pay other token
-            return delta.amount1() > 0 && delta.amount0() < 0;
-        }
-    }
+        bool isBuy = isEventToken0
+            ? (params.zeroForOne == false)
+            : (params.zeroForOne == true);
+        uint24 feePpm = isBuy ? 10_000 : 100_000; // 1% or 10%
 
-    /**
-     * @notice Calculate the dynamic fee override
-     * @param isBuy True if buying EventToken, false if selling
-     * @return fee LP fee override in basis points (1 bp = 0.01%)
-     * @dev Buy: 100 bp (1% - encourages participation from true fans)
-     * @dev Sell: 1000 bp (10% - strong deterrent against speculation and early exit)
-     * @dev These fees are applied on top of the base pool fee
-     * @dev The fee structure aligns with Fanio's long-term participation goals
-     */
-    function _calculateDynamicFee(bool isBuy) internal pure returns (int128) {
-        return isBuy ? int128(100) : int128(1000);
+        uint24 feeOverride = LPFeeLibrary.OVERRIDE_FEE_FLAG | feePpm;
+
+        return (
+            IHooks.beforeSwap.selector,
+            BeforeSwapDeltaLibrary.ZERO_DELTA,
+            feeOverride
+        );
     }
 }

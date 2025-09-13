@@ -101,7 +101,7 @@ contract FundingManagerTest is Test, Deployers {
         deployArtifacts();
 
         // Deploy DynamicFeeHook with proper flags using deployCodeTo
-        uint160 flags = uint160(Hooks.AFTER_SWAP_FLAG);
+        uint160 flags = uint160(Hooks.BEFORE_SWAP_FLAG);
         address hookAddress = address(uint160(flags));
         deployCodeTo(
             "DynamicFeeHook.sol:DynamicFeeHook",

@@ -90,7 +90,7 @@ contract EventTokenTest is Test, Deployers {
         address mockProtocolWallet = address(0x456);
 
         // Deploy DynamicFeeHook with proper flags
-        uint160 flags = uint160(Hooks.AFTER_SWAP_FLAG);
+        uint160 flags = uint160(Hooks.BEFORE_SWAP_FLAG);
         deployCodeTo(
             "DynamicFeeHook.sol",
             abi.encode(poolManager, address(this)), // Test contract as authorized caller
