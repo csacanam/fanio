@@ -305,7 +305,6 @@ contract FundingManagerTest is Test, Deployers {
         // Verify contributor1 received tokens (1:1 ratio with contribution)
         assertEq(eventToken.balanceOf(contributor1), TOTAL_TO_RAISE * 1e12);
 
-        // TODO: Hook token transfer temporarily disabled for demo
         // Verify hook does NOT receive tokens (functionality disabled)
         assertEq(mockUSDC.balanceOf(address(hook)), 0); // No USDC transferred to hook
         assertEq(eventToken.balanceOf(address(hook)), 0); // No TSBOG transferred to hook
@@ -380,5 +379,145 @@ contract FundingManagerTest is Test, Deployers {
         // Note: isActive might still be true in getCampaignStatus because
         // it returns the stored value, not the runtime state during contribute()
         // The important thing is that the contribution failed as expected
+    }
+
+    // ========================================
+    // REFUND FUNCTIONALITY TESTS
+    // ========================================
+
+    /**
+     * @notice Test automatic refund functionality for expired campaigns
+     * @dev Verifies that closeExpiredCampaign automatically refunds all participants
+     */
+    function test_AutomaticRefundOnCampaignClose() public {
+        // Create campaign with contribution
+        uint256 campaignId = _createCampaignWithContribution();
+
+        // Get balances before closing
+        uint256 organizerBalanceBefore = mockUSDC.balanceOf(organizer);
+        uint256 contributor1BalanceBefore = mockUSDC.balanceOf(contributor1);
+
+        // Fast forward past deadline and close campaign
+        vm.warp(block.timestamp + 8 days);
+        fundingManager.closeExpiredCampaign(campaignId);
+
+        // Verify organizer got refunded
+        uint256 organizerBalanceAfter = mockUSDC.balanceOf(organizer);
+        assertEq(
+            organizerBalanceAfter,
+            organizerBalanceBefore + ORGANIZER_DEPOSIT,
+            "Organizer should receive deposit refund automatically"
+        );
+
+        // Verify contributor got refunded
+        uint256 contributor1BalanceAfter = mockUSDC.balanceOf(contributor1);
+        assertEq(
+            contributor1BalanceAfter,
+            contributor1BalanceBefore + 10_000e6,
+            "Contributor should receive contribution refund automatically"
+        );
+
+        // Verify user's contribution is cleared
+        assertEq(
+            fundingManager.userContributions(contributor1, campaignId),
+            0,
+            "User contribution should be cleared after automatic refund"
+        );
+    }
+
+    /**
+     * @notice Test closeExpiredCampaign fails for active campaigns
+     * @dev Verifies that closeExpiredCampaign can only be called on expired campaigns
+     */
+    function test_CloseExpiredCampaignFailsForActiveCampaign() public {
+        // Create campaign without expiring it
+        uint256 campaignId = _createCampaignWithContribution();
+
+        // Try to close before campaign expires (should fail)
+        vm.expectRevert("Campaign not expired yet");
+        fundingManager.closeExpiredCampaign(campaignId);
+    }
+
+    /**
+     * @notice Test closeExpiredCampaign fails for funded campaigns
+     * @dev Verifies that closeExpiredCampaign cannot be called on funded campaigns
+     */
+    function test_CloseExpiredCampaignFailsForFundedCampaign() public {
+        // Create and fund campaign to reach goal
+        uint256 campaignId = _createAndFundCampaign();
+
+        // Try to close funded campaign (should fail)
+        vm.expectRevert("Campaign not expired yet");
+        fundingManager.closeExpiredCampaign(campaignId);
+    }
+
+    // ========================================
+    // HELPER FUNCTIONS
+    // ========================================
+
+    /**
+     * @notice Create a campaign with a single contribution
+     * @return campaignId The ID of the created campaign
+     */
+    function _createCampaignWithContribution() internal returns (uint256) {
+        // Approve USDC spending
+        vm.startPrank(organizer);
+        mockUSDC.approve(address(fundingManager), ORGANIZER_DEPOSIT);
+
+        // Create a campaign
+        uint256 campaignId = fundingManager.createCampaign(
+            "Test Event",
+            "TEST",
+            TARGET_AMOUNT,
+            7, // 7 days duration
+            address(mockUSDC)
+        );
+        vm.stopPrank();
+
+        // Contribute some amount (but not enough to reach goal)
+        vm.startPrank(contributor1);
+        mockUSDC.approve(address(fundingManager), 10_000e6);
+        fundingManager.contribute(campaignId, 10_000e6);
+        vm.stopPrank();
+
+        return campaignId;
+    }
+
+    /**
+     * @notice Create and fund a campaign to reach its goal
+     * @return campaignId The ID of the created campaign
+     */
+    function _createAndFundCampaign() internal returns (uint256) {
+        // Approve USDC spending
+        vm.startPrank(organizer);
+        mockUSDC.approve(address(fundingManager), ORGANIZER_DEPOSIT);
+
+        // Create a campaign
+        uint256 campaignId = fundingManager.createCampaign(
+            "Test Event",
+            "TEST",
+            TARGET_AMOUNT,
+            7, // 7 days duration
+            address(mockUSDC)
+        );
+        vm.stopPrank();
+
+        // Fund the campaign to reach goal
+        vm.startPrank(organizer);
+        mockUSDC.approve(address(fundingManager), 50_000e6);
+        fundingManager.contribute(campaignId, 50_000e6);
+        vm.stopPrank();
+
+        vm.startPrank(contributor1);
+        mockUSDC.approve(address(fundingManager), 40_000e6);
+        fundingManager.contribute(campaignId, 40_000e6);
+        vm.stopPrank();
+
+        vm.startPrank(contributor2);
+        mockUSDC.approve(address(fundingManager), 30_000e6);
+        fundingManager.contribute(campaignId, 30_000e6);
+        vm.stopPrank();
+
+        return campaignId;
     }
 }

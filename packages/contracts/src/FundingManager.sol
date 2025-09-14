@@ -3,6 +3,7 @@ pragma solidity ^0.8.26;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./EventToken.sol";
 import "./DynamicFeeHook.sol";
@@ -46,6 +47,7 @@ import {CampaignLib} from "./libraries/CampaignLib.sol";
 contract FundingManager is ReentrancyGuard {
 
     using CurrencyLibrary for Currency;
+    using SafeERC20 for IERC20;
 
     // ========================================
     // IMMUTABLE STATE VARIABLES
@@ -138,6 +140,10 @@ contract FundingManager is ReentrancyGuard {
     /// @dev Tracks individual user contributions for each campaign
     mapping(address => mapping(uint256 => uint256)) public userContributions;
 
+    /// @notice Mapping from campaign ID to array of contributor addresses
+    /// @dev Tracks all contributors for each campaign for automatic refunds
+    mapping(uint256 => address[]) public campaignContributors;
+
     /// @notice Next available campaign ID (auto-incrementing)
     /// @dev Used to generate unique campaign identifiers
     uint256 public nextCampaignId;
@@ -200,6 +206,25 @@ contract FundingManager is ReentrancyGuard {
      * @param poolTokens Number of tokens minted for pool (25% of target)
      */
     event TokensMinted(uint256 indexed campaignId, uint256 poolTokens);
+
+    /**
+     * @dev Emitted when a campaign is closed (expired and not funded)
+     * @param campaignId ID of the closed campaign
+     * @param totalRaised Total amount raised before closure
+     */
+    event CampaignClosed(uint256 indexed campaignId, uint256 totalRaised);
+
+    /**
+     * @dev Emitted when a contributor receives a refund
+     * @param campaignId ID of the campaign
+     * @param contributor Address of the contributor receiving refund
+     * @param amount Amount refunded
+     */
+    event ContributionRefunded(
+        uint256 indexed campaignId,
+        address indexed contributor,
+        uint256 amount
+    );
 
     /**
      * @dev Emitted when protocol fees are collected
@@ -395,6 +420,8 @@ contract FundingManager is ReentrancyGuard {
         userContributions[msg.sender][campaignId] += amount;
         if (userContributions[msg.sender][campaignId] == amount) {
             campaign.uniqueBackers++;
+            // Add contributor to campaign contributors array
+            campaignContributors[campaignId].push(msg.sender);
         }
 
         EventToken eventToken = EventToken(campaign.eventToken);
@@ -488,7 +515,7 @@ contract FundingManager is ReentrancyGuard {
 
 
     /**
-     * @dev Close an expired campaign that didn't reach its funding goal
+     * @dev Close an expired campaign and refund all participants
      *
      * This is the PRIMARY function for handling campaign expiration. It can be called
      * by anyone to close a campaign that has passed its deadline without reaching
@@ -498,20 +525,21 @@ contract FundingManager is ReentrancyGuard {
      * Flow:
      * 1. Validates campaign has passed its deadline
      * 2. Confirms campaign hasn't been funded
-     * 3. Uses unified logic to close expired campaign
-     * 4. Emits expiration event
+     * 3. Marks campaign as inactive
+     * 4. Refunds organizer deposit automatically
+     * 5. Refunds all contributors automatically
+     * 6. Emits events for all refunds and campaign closure
      *
      * @param campaignId ID of the expired campaign to close
      *
      * @notice Anyone can call this function to close expired campaigns
      * @notice Campaign must be past its deadline
      * @notice Campaign must not have been successfully funded
-     * @notice This function handles both active and already-inactive campaigns
-     * @notice Refund logic for contributors is planned for future implementation
-     *
+     * @notice Automatically refunds organizer deposit and all contributors
+     * @notice No manual refund calls needed - everything is automatic
      * @custom:security Anyone can call this function (public utility)
      * @custom:security Only affects expired, unfunded campaigns
-     * @custom:security No funds are transferred in this function
+     * @custom:security Automatically refunds all participants
      * @custom:security Idempotent - safe to call multiple times
      */
     function closeExpiredCampaign(uint256 campaignId) external {
@@ -524,7 +552,71 @@ contract FundingManager is ReentrancyGuard {
         require(!campaign.isFunded, "Campaign already funded");
         _checkCampaignStatus(campaignId);
 
-        // TODO: Implement refund logic for contributors
+        // Mark campaign as inactive
+        campaign.isActive = false;
+
+        // Refund organizer deposit
+        if (campaign.organizerDeposit > 0) {
+            IERC20(campaign.fundingToken).safeTransfer(
+                campaign.organizer,
+                campaign.organizerDeposit
+            );
+            emit ContributionRefunded(campaignId, campaign.organizer, campaign.organizerDeposit);
+        }
+
+        // Refund all contributors automatically
+        address[] memory contributors = campaignContributors[campaignId];
+        for (uint256 i = 0; i < contributors.length; i++) {
+            address contributor = contributors[i];
+            if (userContributions[contributor][campaignId] > 0) {
+                _refundContribution(campaignId, contributor);
+            }
+        }
+
+        // Emit campaign closed event
+        emit CampaignClosed(campaignId, campaign.raisedAmount);
+    }
+
+    /**
+     * @notice Refund a contributor's funds from an expired campaign
+     * @dev Internal function to refund individual contributors
+     *
+     * Requirements:
+     * - Campaign must be expired and not funded
+     * - Campaign must be closed (inactive)
+     * - User must have contributed to the campaign
+     * - User must not have already been refunded
+     *
+     * @param campaignId The ID of the campaign to refund from
+     * @param contributor The address of the contributor to refund
+     *
+     * @custom:security Internal function - only callable by closeExpiredCampaign
+     * @custom:security Prevents double refunding with state updates
+     * @custom:security Reentrancy protection included
+     */
+    function _refundContribution(uint256 campaignId, address contributor) internal {
+        EventCampaign storage campaign = campaigns[campaignId];
+
+        // Verify campaign is expired and not funded
+        require(
+            CampaignLib.isExpired(campaign.deadline, block.timestamp),
+            "Campaign not expired yet"
+        );
+        require(!campaign.isFunded, "Campaign already funded");
+        require(!campaign.isActive, "Campaign not closed yet");
+
+        // Get user's contribution amount
+        uint256 contributionAmount = userContributions[contributor][campaignId];
+        require(contributionAmount > 0, "No contribution to refund");
+
+        // Clear user's contribution to prevent double refunding
+        userContributions[contributor][campaignId] = 0;
+
+        // Transfer funds back to contributor
+        IERC20(campaign.fundingToken).safeTransfer(contributor, contributionAmount);
+
+        // Emit refund event
+        emit ContributionRefunded(campaignId, contributor, contributionAmount);
     }
 
     /**
