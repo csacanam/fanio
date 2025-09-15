@@ -33,8 +33,8 @@ contract CreateCampaign is Script {
         // Check USDC balance and approve if needed
         IERC20 usdc = IERC20(fundingToken);
         uint256 balance = usdc.balanceOf(deployer);
-        uint256 targetAmount = 100_000e6; // 100k USDC target
-        uint256 requiredAmount = 10_000e6; // 10k USDC for deposit (10% of 100k USDC)
+        uint256 targetAmount = 1_000e6; // 1k USDC target
+        uint256 requiredAmount = 100e6; // 100 USDC for deposit (10% of 1k USDC)
         console.log("Your USDC Balance:", balance / 1e6, "USDC");
         console.log("Required Amount:", requiredAmount / 1e6, "USDC");
 

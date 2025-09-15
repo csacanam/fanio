@@ -10,6 +10,8 @@ import {Config} from "./Config.s.sol";
 import {MockUSDC} from "../src/mocks/MockUSDC.sol";
 import {AddressConstants} from "../lib/hookmate/src/constants/AddressConstants.sol";
 import {console} from "forge-std/console.sol";
+import {Hooks} from "v4-core/libraries/Hooks.sol";
+import {HookMiner} from "v4-periphery/src/utils/HookMiner.sol";
 
 contract DeployFundingManager is Script {
     function run() external {
@@ -75,8 +77,19 @@ contract DeployFundingManager is Script {
             address positionManager = AddressConstants
                 .getPositionManagerAddress(block.chainid);
 
+            uint160 flags = uint160(Hooks.BEFORE_SWAP_FLAG);
+
+            // Mine a salt that will produce a hook address with the correct flags
+            bytes memory constructorArgs = abi.encode(poolManager, deployer);
+            (address hookAddress, bytes32 salt) = HookMiner.find(
+                CREATE2_FACTORY,
+                flags,
+                type(DynamicFeeHook).creationCode,
+                constructorArgs
+            );
+
             // Deploy DynamicFeeHook first
-            DynamicFeeHook dynamicFeeHook = new DynamicFeeHook(
+            DynamicFeeHook dynamicFeeHook = new DynamicFeeHook{salt: salt}(
                 IPoolManager(poolManager),
                 deployer // Use deployer as authorized caller
             );
@@ -90,6 +103,11 @@ contract DeployFundingManager is Script {
             );
 
             vm.stopBroadcast();
+
+            require(
+                address(dynamicFeeHook) == hookAddress,
+                "DeployHookScript: Hook Address Mismatch"
+            );
 
             // Print deployment addresses (Foundry standard)
             console.log("=== Base Sepolia Deployment Complete ===");
