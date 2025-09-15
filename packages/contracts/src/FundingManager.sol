@@ -741,7 +741,7 @@ contract FundingManager is ReentrancyGuard {
         uint256 campaignId
     ) external view returns (uint256) {
         EventCampaign storage campaign = campaigns[campaignId];
-        return CampaignLib.calculateCampaignGoal(campaign.targetAmount, 30);
+        return CampaignLib.calculateCampaignGoal(campaign.targetAmount, 20);
     }
 
     /**

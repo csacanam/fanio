@@ -112,11 +112,16 @@ function updateFrontendConfig() {
     );
 
     if (!fundingManagerTx) {
-      log("❌ Could not find FundingManager transaction in broadcast file", "red");
+      log(
+        "❌ Could not find FundingManager transaction in broadcast file",
+        "red"
+      );
       log("   Available transactions:", "yellow");
       transactions.forEach((tx, index) => {
         log(
-          `   ${index}: ${tx.contractName || "Unknown"} - ${tx.contractAddress}`,
+          `   ${index}: ${tx.contractName || "Unknown"} - ${
+            tx.contractAddress
+          }`,
           "yellow"
         );
       });

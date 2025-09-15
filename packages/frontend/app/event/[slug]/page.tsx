@@ -89,50 +89,11 @@ export default function EventPage({ params }: EventPageProps) {
     explorerUrl
   } = useContribution(0);
   
-  // Function to refresh campaign data with optimized retry logic
+  // Function to refresh campaign data (simplified since hook now verifies state change)
   const refreshCampaignData = async () => {
     console.log('Refreshing campaign data from blockchain...');
-    
-    // Try multiple times with delays to ensure blockchain state is updated
-    const maxRetries = 3;
-    const baseDelay = 500; // Reduced from 2000ms to 500ms
-    
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        console.log(`Refresh attempt ${attempt}/${maxRetries}...`);
-        
-        // Call the hook's refetch function to get fresh data
-        await refetch();
-        console.log('Campaign data refreshed successfully');
-        
-        // Verify the data actually changed by checking current state
-        if (campaignData?.raisedAmount !== undefined) {
-          console.log('Data change confirmed, refresh successful');
-          return; // Exit on successful refresh
-        } else {
-          console.log('Data unchanged, will retry...');
-        }
-        
-        // Wait before next attempt (reduced delays)
-        if (attempt < maxRetries) {
-          const delay = baseDelay * attempt; // 500ms, 1000ms, 1500ms
-          console.log(`Waiting ${delay}ms before retry...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-        
-      } catch (err) {
-        console.error(`Error refreshing campaign data (attempt ${attempt}):`, err);
-        
-        // Wait before retry
-        if (attempt < maxRetries) {
-          const delay = baseDelay * attempt; // 500ms, 1000ms, 1500ms
-          console.log(`Waiting ${delay}ms before retry...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-      }
-    }
-    
-    console.log('All refresh attempts completed');
+    await refetch();
+    console.log('Campaign data refreshed successfully');
   };
   
   const [investmentAmount, setInvestmentAmount] = useState("")

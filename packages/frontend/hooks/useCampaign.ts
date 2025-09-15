@@ -29,7 +29,7 @@ export interface CampaignData {
   timeLeft: number;
   raisedAmount: string;
   targetAmount: string;
-  campaignGoal: string; // Real campaign goal (targetAmount + 30%)
+  campaignGoal: string; // Real campaign goal (targetAmount + 20% excess)
   organizerDeposit: string;
   fundingToken: string;
   protocolFeesCollected: string;
@@ -109,6 +109,7 @@ export const useCampaign = (campaignId: number = 0) => {
       const campaignGoalFormatted = ethers.formatUnits(campaignGoal, usdcDecimals);
       const organizerDeposit = ethers.formatUnits(status.organizerDeposit, usdcDecimals);
       const protocolFeesCollected = ethers.formatUnits(status.protocolFeesCollected, usdcDecimals);
+
 
       // Calculate progress based on real campaign goal (not organizer target)
       const progress = campaignGoal > 0 

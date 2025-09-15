@@ -235,15 +235,42 @@ export const useContribution = (campaignId: number = 0) => {
       // Wait for confirmation
       const receipt = await contributeTx.wait();
       console.log('Contribution confirmed - Full receipt:', receipt);
-      console.log('Receipt type:', typeof receipt);
-      console.log('Receipt keys:', Object.keys(receipt || {}));
       
       // Get transaction hash safely
       const txHash = receipt?.hash || receipt?.transactionHash || 'Unknown';
       console.log('Transaction hash:', txHash);
 
-      setTransactionHash(txHash); // Store the full transaction hash
-      setSuccess(`Successfully contributed ${amount} USDC!`);
+      // Poll for raised amount update until confirmed or timeout
+      console.log('Polling for raised amount update...');
+      let newRaisedAmount;
+      let attempts = 0;
+      const maxAttempts = 10; // Maximum attempts to prevent infinite loop
+      
+      while (attempts < maxAttempts) {
+        // Wait 1 second between attempts
+        if (attempts > 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
+        const campaignStatus = await fundingManager.getCampaignStatus(campaignId);
+        newRaisedAmount = campaignStatus.raisedAmount;
+        console.log(`Raised amount check ${attempts + 1}:`, ethers.formatUnits(newRaisedAmount, 6), 'USDC');
+        
+        // Check if raised amount increased by at least our contribution
+        if (newRaisedAmount >= amountWei) {
+          console.log('Contribution confirmed successfully!');
+          setTransactionHash(txHash);
+          setSuccess(`Successfully contributed ${amount} USDC!`);
+          return; // Exit early on success
+        }
+        
+        attempts++;
+        console.log(`Attempt ${attempts}/${maxAttempts}...`);
+      }
+      
+      // If we get here, raised amount was never confirmed
+      console.log('Contribution never confirmed after all attempts');
+      throw new Error('Contribution confirmed but blockchain is taking time to update. Please wait a moment.');
 
     } catch (err: any) {
       console.error('Contribution error:', err);
