@@ -46,17 +46,31 @@ contract ViewCampaign is Script {
             console.log("Is Expired:", isExpired);
             console.log("Is Funded:", isFunded);
             console.log("Time Left (seconds):", timeLeft);
-            console.log("Raised Amount:", raisedAmount);
-            console.log("Target Amount:", targetAmount);
-            console.log("Organizer Deposit:", organizerDeposit);
+            console.log("Raised Amount:", raisedAmount / 1e6, "USDC");
+            console.log("Target Amount:", targetAmount / 1e6, "USDC");
+            console.log(
+                "Total Goal (with 20% excess):",
+                (targetAmount * 120) / 100 / 1e6,
+                "USDC"
+            );
+            console.log("Organizer Deposit:", organizerDeposit / 1e6, "USDC");
             console.log("Funding Token:", fundingToken);
-            console.log("Protocol Fees Collected:", protocolFeesCollected);
+            console.log(
+                "Protocol Fees Collected:",
+                protocolFeesCollected / 1e6,
+                "USDC"
+            );
             console.log("Unique Backers:", uniqueBackers);
 
             // Calculate progress
             if (targetAmount > 0) {
                 uint256 progress = (raisedAmount * 100) / targetAmount;
-                console.log("Progress:", progress, "%");
+                console.log("Progress (vs target):", progress, "%");
+
+                // Calculate progress vs total goal (120%)
+                uint256 totalGoal = (targetAmount * 120) / 100;
+                uint256 progressVsTotal = (raisedAmount * 100) / totalGoal;
+                console.log("Progress (vs total goal):", progressVsTotal, "%");
             }
 
             // Calculate time remaining in human readable format

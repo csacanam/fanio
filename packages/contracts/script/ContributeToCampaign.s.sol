@@ -11,7 +11,7 @@ contract ContributeToCampaign is Script {
     function run() external {
         // Configuration - modify these values as needed
         uint256 campaignId = 0; // Campaign to contribute to
-        uint256 contributionAmount = 1e6; // 1 USDC (1,000,000 wei)
+        uint256 contributionAmount = 10_000e6; // 10k USDC (10,000,000,000 wei)
 
         // Get configuration based on network
         Config config = new Config();
@@ -75,16 +75,16 @@ contract ContributeToCampaign is Script {
 
         // Get updated campaign status
         try fundingManager.getCampaignStatus(campaignId) returns (
-            bool isActive,
-            bool isExpired,
-            bool isFunded,
-            uint256 timeLeft,
+            bool /* isActive */,
+            bool /* isExpired */,
+            bool /* isFunded */,
+            uint256 /* timeLeft */,
             uint256 raisedAmount,
             uint256 targetAmount,
-            uint256 organizerDeposit,
-            address fundingTokenAddr,
-            uint256 protocolFeesCollected,
-            uint256 uniqueBackers
+            uint256 /* organizerDeposit */,
+            address /* fundingTokenAddr */,
+            uint256 /* protocolFeesCollected */,
+            uint256 /* uniqueBackers */
         ) {
             console.log("=== Updated Campaign Status ===");
             console.log("Raised Amount:", raisedAmount / 1e6, "USDC");

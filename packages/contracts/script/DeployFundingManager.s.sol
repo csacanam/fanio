@@ -5,8 +5,10 @@ import {Script} from "forge-std/Script.sol";
 import {FundingManager} from "../src/FundingManager.sol";
 import {DynamicFeeHook} from "../src/DynamicFeeHook.sol";
 import {IPoolManager} from "v4-core/interfaces/IPoolManager.sol";
+import {IPositionManager} from "v4-periphery/src/interfaces/IPositionManager.sol";
 import {Config} from "./Config.s.sol";
 import {MockUSDC} from "../src/mocks/MockUSDC.sol";
+import {AddressConstants} from "../lib/hookmate/src/constants/AddressConstants.sol";
 import {console} from "forge-std/console.sol";
 
 contract DeployFundingManager is Script {
@@ -41,15 +43,15 @@ contract DeployFundingManager is Script {
                 deployer // Use deployer as authorized caller
             );
 
-            // Deploy ModifyLiquidityRouter (mock for now)
-            address modifyLiquidityRouter = address(0x456); // Mock address for local testing
+            // Deploy PositionManager (mock for now)
+            address positionManager = address(0x456); // Mock address for local testing
 
             FundingManager fundingManager = new FundingManager(
                 fundingToken,
                 protocolWallet,
                 poolManager,
                 address(dynamicFeeHook),
-                modifyLiquidityRouter
+                positionManager
             );
 
             vm.stopBroadcast();
@@ -58,6 +60,7 @@ contract DeployFundingManager is Script {
             console.log("=== Local Deployment Complete ===");
             console.log("MockUSDC deployed at:", address(mockUSDC));
             console.log("FundingManager deployed at:", address(fundingManager));
+            console.log("DynamicFeeHook deployed at:", address(dynamicFeeHook));
             console.log("Protocol Wallet:", protocolWallet);
         } else if (block.chainid == 84532) {
             // Base Sepolia deployment: use Base Sepolia config
@@ -65,8 +68,12 @@ contract DeployFundingManager is Script {
 
             vm.startBroadcast(deployerPrivateKey);
 
-            // Base Sepolia PoolManager address
-            address poolManager = 0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408;
+            // Get addresses from AddressConstants
+            address poolManager = AddressConstants.getPoolManagerAddress(
+                block.chainid
+            );
+            address positionManager = AddressConstants
+                .getPositionManagerAddress(block.chainid);
 
             // Deploy DynamicFeeHook first
             DynamicFeeHook dynamicFeeHook = new DynamicFeeHook(
@@ -74,15 +81,12 @@ contract DeployFundingManager is Script {
                 deployer // Use deployer as authorized caller
             );
 
-            // Deploy ModifyLiquidityRouter (mock for now)
-            address modifyLiquidityRouter = address(0x456); // Mock address for local testing
-
             FundingManager fundingManager = new FundingManager(
                 fundingToken,
                 protocolWallet,
                 poolManager,
                 address(dynamicFeeHook),
-                modifyLiquidityRouter
+                positionManager
             );
 
             vm.stopBroadcast();
@@ -90,6 +94,9 @@ contract DeployFundingManager is Script {
             // Print deployment addresses (Foundry standard)
             console.log("=== Base Sepolia Deployment Complete ===");
             console.log("FundingManager deployed at:", address(fundingManager));
+            console.log("DynamicFeeHook deployed at:", address(dynamicFeeHook));
+            console.log("PoolManager address:", poolManager);
+            console.log("PositionManager address:", positionManager);
             console.log("Funding Token:", fundingToken);
             console.log("Protocol Wallet:", protocolWallet);
         } else {

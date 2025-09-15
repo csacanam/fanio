@@ -33,9 +33,10 @@ contract CreateCampaign is Script {
         // Check USDC balance and approve if needed
         IERC20 usdc = IERC20(fundingToken);
         uint256 balance = usdc.balanceOf(deployer);
-        uint256 requiredAmount = 10e6; // 10 USDC for deposit (10% of 100 USDC)
-        console.log("Your USDC Balance:", balance);
-        console.log("Required Amount:", requiredAmount);
+        uint256 targetAmount = 100_000e6; // 100k USDC target
+        uint256 requiredAmount = 10_000e6; // 10k USDC for deposit (10% of 100k USDC)
+        console.log("Your USDC Balance:", balance / 1e6, "USDC");
+        console.log("Required Amount:", requiredAmount / 1e6, "USDC");
 
         if (balance < requiredAmount) {
             revert("Insufficient USDC balance");
@@ -63,7 +64,13 @@ contract CreateCampaign is Script {
         console.log("FundingManager Address:", fundingManagerAddress);
         console.log("Event Name: Taylor Swift | The Eras Tour");
         console.log("Token Symbol: TSBOG");
-        console.log("Target Amount: 100000000");
+        console.log("Target Amount:", targetAmount / 1e6, "USDC");
+        console.log(
+            "Total Goal (with 20% excess):",
+            (targetAmount * 120) / 100 / 1e6,
+            "USDC"
+        );
+        console.log("Organizer Deposit (10%):", requiredAmount / 1e6, "USDC");
         console.log("Duration (days): 30");
         console.log("Organizer:", deployer);
 
@@ -74,7 +81,7 @@ contract CreateCampaign is Script {
         uint256 campaignId = fundingManager.createCampaign(
             "Taylor Swift | The Eras Tour",
             "TSBOG",
-            100e6, // 100 USDC (6 decimals)
+            targetAmount, // 100k USDC (6 decimals)
             30, // 30 days
             fundingToken
         );
@@ -84,4 +91,4 @@ contract CreateCampaign is Script {
         console.log("=== Campaign Created Successfully ===");
         console.log("Campaign ID:", campaignId);
     }
-}   
+}

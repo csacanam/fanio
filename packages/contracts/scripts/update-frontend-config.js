@@ -3,6 +3,11 @@
 /**
  * Script to update frontend configuration with deployed contract addresses
  * This script reads the latest broadcast file and updates the frontend config
+ *
+ * Usage: node update-frontend-config.js [network] [deployScript]
+ * Examples:
+ *   node update-frontend-config.js 84532 DeployFundingManager.s.sol
+ *   node update-frontend-config.js 31337 DeployFundingManager.s.sol
  */
 
 const fs = require("fs");
@@ -13,6 +18,7 @@ const colors = {
   red: "\x1b[31m",
   green: "\x1b[32m",
   yellow: "\x1b[33m",
+  blue: "\x1b[34m",
   reset: "\x1b[0m",
 };
 
@@ -20,22 +26,73 @@ function log(message, color = "reset") {
   console.log(`${colors[color]}${message}${colors.reset}`);
 }
 
+// Network configurations
+const NETWORKS = {
+  31337: {
+    name: "Local/Anvil",
+    explorer: "http://localhost:8545",
+    rpcUrl: "http://localhost:8545",
+  },
+  84532: {
+    name: "Base Sepolia",
+    explorer: "https://sepolia.basescan.org",
+    rpcUrl: "https://sepolia.base.org",
+  },
+  8453: {
+    name: "Base Mainnet",
+    explorer: "https://basescan.org",
+    rpcUrl: "https://mainnet.base.org",
+  },
+  1: {
+    name: "Ethereum Mainnet",
+    explorer: "https://etherscan.io",
+    rpcUrl: "https://eth.llamarpc.com",
+  },
+  11155111: {
+    name: "Sepolia",
+    explorer: "https://sepolia.etherscan.io",
+    rpcUrl: "https://sepolia.llamarpc.com",
+  },
+};
+
 function updateFrontendConfig() {
   try {
-    log("🔄 Updating frontend configuration...", "yellow");
+    // Parse command line arguments
+    const network = process.argv[2] || "84532";
+    const deployScript = process.argv[3] || "DeployFundingManager.s.sol";
 
-    // Get the latest broadcast file for Base Sepolia
+    const networkInfo = NETWORKS[network];
+    if (!networkInfo) {
+      log(`❌ Unsupported network: ${network}`, "red");
+      log(
+        `   Supported networks: ${Object.keys(NETWORKS).join(", ")}`,
+        "yellow"
+      );
+      process.exit(1);
+    }
+
+    log(
+      `🔄 Updating frontend configuration for ${networkInfo.name} (${network})...`,
+      "yellow"
+    );
+    log(`   Deploy script: ${deployScript}`, "blue");
+
+    // Get the latest broadcast file for the specified network
     const broadcastDir = path.join(
       __dirname,
       "..",
       "broadcast",
-      "DeployFundingManager.s.sol",
-      "84532"
+      deployScript,
+      network
     );
     const latestFile = path.join(broadcastDir, "run-latest.json");
 
     if (!fs.existsSync(latestFile)) {
-      log("❌ No broadcast file found. Run the deploy script first.", "red");
+      log(`❌ No broadcast file found at: ${latestFile}`, "red");
+      log(
+        `   Run the deploy script first: forge script script/${deployScript} --rpc-url [RPC_URL] --broadcast`,
+        "yellow"
+      );
       process.exit(1);
     }
 
@@ -43,19 +100,33 @@ function updateFrontendConfig() {
     const broadcastData = JSON.parse(fs.readFileSync(latestFile, "utf8"));
 
     // Extract contract addresses
-    const fundingManager = broadcastData.transactions[0].contractAddress;
-    const usdcAddress = broadcastData.transactions[0].arguments[0]; // USDC address is first constructor argument
+    const transactions = broadcastData.transactions || [];
+    if (transactions.length === 0) {
+      log("❌ No transactions found in broadcast file", "red");
+      process.exit(1);
+    }
 
-    if (!fundingManager || !usdcAddress) {
-      log("❌ Could not extract contract addresses from broadcast file", "red");
-      log(`   FundingManager: ${fundingManager}`, "red");
-      log(`   USDC: ${usdcAddress}`, "red");
+    // Find FundingManager deployment
+    const fundingManagerTx =
+      transactions.find(
+        (tx) => tx.contractName === "FundingManager" || tx.contractAddress
+      ) || transactions[0];
+
+    const fundingManager = fundingManagerTx.contractAddress;
+    const usdcAddress = fundingManagerTx.arguments?.[0];
+
+    if (!fundingManager) {
+      log("❌ Could not find FundingManager contract address", "red");
       process.exit(1);
     }
 
     log("✅ Extracted addresses:", "green");
     log(`   FundingManager: ${fundingManager}`, "green");
-    log(`   USDC: ${usdcAddress}`, "green");
+    if (usdcAddress) {
+      log(`   USDC: ${usdcAddress}`, "green");
+    } else {
+      log(`   USDC: Not found in broadcast file`, "yellow");
+    }
 
     // Create frontend config file
     const frontendConfigPath = path.join(
@@ -74,9 +145,22 @@ function updateFrontendConfig() {
     }
 
     // Generate the config file content
+    const networkKey =
+      network === "31337"
+        ? "local"
+        : network === "84532"
+        ? "baseSepolia"
+        : network === "8453"
+        ? "baseMainnet"
+        : network === "1"
+        ? "ethereumMainnet"
+        : network === "11155111"
+        ? "sepolia"
+        : `network${network}`;
+
     const configContent = `// Auto-generated contract configuration
 // Updated on: ${new Date().toISOString()}
-// Network: Base Sepolia
+// Network: ${networkInfo.name} (${network})
 
 export const CONTRACTS = {
   local: {
@@ -84,10 +168,28 @@ export const CONTRACTS = {
     usdc: "0x0000000000000000000000000000000000000000" // Placeholder for local
   },
   baseSepolia: {
-    fundingManager: "${fundingManager}",
-    usdc: "${usdcAddress}"
+    fundingManager: "0x0000000000000000000000000000000000000000", // Placeholder
+    usdc: "0x0000000000000000000000000000000000000000" // Placeholder
+  },
+  baseMainnet: {
+    fundingManager: "0x0000000000000000000000000000000000000000", // Placeholder
+    usdc: "0x0000000000000000000000000000000000000000" // Placeholder
+  },
+  ethereumMainnet: {
+    fundingManager: "0x0000000000000000000000000000000000000000", // Placeholder
+    usdc: "0x0000000000000000000000000000000000000000" // Placeholder
+  },
+  sepolia: {
+    fundingManager: "0x0000000000000000000000000000000000000000", // Placeholder
+    usdc: "0x0000000000000000000000000000000000000000" // Placeholder
   }
 } as const;
+
+// Update the specific network with deployed addresses
+CONTRACTS.${networkKey} = {
+  fundingManager: "${fundingManager}",
+  usdc: "${usdcAddress || "0x0000000000000000000000000000000000000000"}"
+};
 
 export type Network = keyof typeof CONTRACTS;
 export type ContractAddresses = typeof CONTRACTS[Network];
@@ -97,16 +199,31 @@ export const getContractAddresses = (network: Network): ContractAddresses => {
   return CONTRACTS[network];
 };
 
-// Default to Base Sepolia for now
-export const DEFAULT_NETWORK: Network = "baseSepolia";
+// Default to the deployed network
+export const DEFAULT_NETWORK: Network = "${networkKey}";
 
 export const EXPLORERS = {
-  local: "http://localhost:8545", // Placeholder for local
-  baseSepolia: "https://sepolia.basescan.org"
+  local: "http://localhost:8545",
+  baseSepolia: "https://sepolia.basescan.org",
+  baseMainnet: "https://basescan.org",
+  ethereumMainnet: "https://etherscan.io",
+  sepolia: "https://sepolia.etherscan.io"
+} as const;
+
+export const RPC_URLS = {
+  local: "http://localhost:8545",
+  baseSepolia: "https://sepolia.base.org",
+  baseMainnet: "https://mainnet.base.org",
+  ethereumMainnet: "https://eth.llamarpc.com",
+  sepolia: "https://sepolia.llamarpc.com"
 } as const;
 
 export const getExplorerUrl = (network: Network): string => {
   return EXPLORERS[network];
+};
+
+export const getRpcUrl = (network: Network): string => {
+  return RPC_URLS[network];
 };
 `;
 
@@ -125,17 +242,35 @@ export const getExplorerUrl = (network: Network): string => {
 
     const envContent = `# Auto-generated environment variables
 # Updated on: ${new Date().toISOString()}
+# Network: ${networkInfo.name} (${network})
 
-NEXT_PUBLIC_NETWORK=baseSepolia
+NEXT_PUBLIC_NETWORK=${networkKey}
+NEXT_PUBLIC_CHAIN_ID=${network}
+NEXT_PUBLIC_RPC_URL=${networkInfo.rpcUrl}
+NEXT_PUBLIC_EXPLORER_URL=${networkInfo.explorer}
 NEXT_PUBLIC_FUNDING_MANAGER=${fundingManager}
-NEXT_PUBLIC_USDC_ADDRESS=${usdcAddress}
+NEXT_PUBLIC_USDC_ADDRESS=${
+      usdcAddress || "0x0000000000000000000000000000000000000000"
+    }
 `;
 
     fs.writeFileSync(frontendEnvPath, envContent);
     log(`✅ Frontend .env.local updated at: ${frontendEnvPath}`, "green");
 
     log("🎉 Frontend configuration update complete!", "green");
-    log("💡 You can now use these addresses in your frontend code", "yellow");
+    log(
+      `💡 You can now use these addresses in your frontend code for ${networkInfo.name}`,
+      "yellow"
+    );
+    log(`   Explorer: ${networkInfo.explorer}`, "blue");
+    log(`   RPC: ${networkInfo.rpcUrl}`, "blue");
+
+    if (fundingManager) {
+      log(
+        `   FundingManager: ${networkInfo.explorer}/address/${fundingManager}`,
+        "blue"
+      );
+    }
   } catch (error) {
     log(`❌ Error updating frontend config: ${error.message}`, "red");
     process.exit(1);

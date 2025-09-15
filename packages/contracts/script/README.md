@@ -8,17 +8,80 @@ Scripts to deploy and configure the FundingManager contract for Fanio.
 
    ```bash
    export PRIVATE_KEY="your_private_key_here"
+   export ETHERSCAN_API_KEY="your_api_key"  # For contract verification
    ```
 
-2. **Available networks:**
+2. **Manual configuration required:**
+
+   **Before first deployment, edit these files:**
+
+   ```bash
+   # Edit protocol wallet addresses
+   vim script/Config.s.sol
+
+   # Edit USDC addresses for your network (if needed)
+   vim script/DeployFundingManager.s.sol
+   ```
+
+3. **Available networks:**
    - Base Sepolia
+   - Base Mainnet
    - Local/Anvil
+
+## ⚠️ Manual Configuration Required
+
+### Before First Deployment
+
+**You must edit these files manually before deploying:**
+
+#### 1. Update `script/Config.s.sol`
+
+**For Base Sepolia and other existing networks:**
+
+```solidity
+// Update both funding token and protocol wallet addresses
+function getBaseSepoliaConfig() external pure returns (address fundingToken, address protocolWallet) {
+    fundingToken = address(0x036CbD53842c5426634e7929541eC2318f3dCF7e); // USDC on Base Sepolia
+    protocolWallet = address(0xYOUR_WALLET_ADDRESS); // ⚠️ EDIT THIS
+}
+```
+
+**For Local/Anvil (funding token is deployed automatically):**
+
+```solidity
+// Only update protocol wallet address (funding token is deployed as MockUSDC)
+function getLocalConfig() external pure returns (address fundingToken, address protocolWallet) {
+    fundingToken = address(0); // Will be deployed as MockUSDC automatically
+    protocolWallet = address(0xYOUR_WALLET_ADDRESS); // ⚠️ EDIT THIS
+}
+```
+
+#### 2. Update `script/DeployFundingManager.s.sol` (only for new networks)
+
+**Only if you're adding a new network that's not in `Config.s.sol`:**
+
+```solidity
+// Add new network configuration in DeployFundingManager.s.sol
+else if (block.chainid == YOUR_NEW_NETWORK_ID) {
+    fundingToken = address(0xYOUR_USDC_ADDRESS); // USDC on your new network
+    protocolWallet = address(0xYOUR_WALLET_ADDRESS); // Your wallet
+    // ... rest of deployment logic
+}
+```
+
+### After Deployment
+
+**These files are updated automatically by scripts:**
+
+- ✅ `script/Config.s.sol` - FundingManager addresses (via `update-config.js`)
+- ✅ `../frontend/config/contracts.ts` - Frontend contract addresses (via `update-frontend-config.js`)
+- ✅ `../frontend/.env.local` - Frontend environment variables (via `update-frontend-config.js`)
 
 ## 🚀 Available Scripts
 
 ### 1. DeployFundingManager.s.sol
 
-Main script to deploy the FundingManager contract.
+Main script to deploy the FundingManager contract with DynamicFeeHook integration.
 
 **Usage:**
 
@@ -34,12 +97,13 @@ forge script script/DeployFundingManager.s.sol:DeployFundingManager --rpc-url ht
 
 - **Automatic:** The script automatically detects the network and uses the appropriate configuration
 - **Base Sepolia:** Uses USDC address `0x036CBD53842c5426634e7929541ec2318F3DCF7C`
-- **Local/Anvil:** Uses mock token for testing
+- **Local/Anvil:** Uses MockERC20 for testing
+- **Addresses:** Uses AddressConstants for PoolManager and PositionManager addresses
 - **Protocol Wallet:** Update the wallet address in `Config.s.sol` before deployment
 
 ### 2. CreateCampaign.s.sol
 
-Script to create campaigns using the deployed FundingManager.
+Script to create campaigns using the deployed FundingManager with 20% excess funding.
 
 **Usage:**
 
@@ -50,12 +114,87 @@ forge script script/CreateCampaign.s.sol:CreateCampaign --rpc-url [RPC_URL] --br
 
 **Configuration:**
 
-- Update `fundingManagerAddress` with the deployed contract address
-- Customize `eventName`, `tokenSymbol`, `targetAmount`, etc.
+- Creates campaigns with 100k USDC target (120k total goal with 20% excess)
+- Requires 10k USDC organizer deposit (10% of target)
+- Automatically handles USDC approval
 
-### 3. Config.s.sol
+### 3. ContributeToCampaign.s.sol
+
+Script to contribute to existing campaigns.
+
+**Usage:**
+
+```bash
+# Contribute to campaign
+forge script script/ContributeToCampaign.s.sol:ContributeToCampaign --rpc-url [RPC_URL] --broadcast
+```
+
+**Configuration:**
+
+- Default contribution: 10k USDC
+- Automatically handles USDC approval
+- Shows campaign progress after contribution
+
+### 4. ViewCampaign.s.sol
+
+Script to view campaign details and status.
+
+**Usage:**
+
+```bash
+# View campaign status
+forge script script/ViewCampaign.s.sol:ViewCampaign --rpc-url [RPC_URL]
+```
+
+**Features:**
+
+- Shows campaign progress vs target and total goal
+- Displays time remaining in human-readable format
+- Shows organizer deposit and unique backers
+
+### 5. ViewEventToken.s.sol
+
+Script to view EventToken details for a campaign.
+
+**Usage:**
+
+```bash
+# View EventToken details
+forge script script/ViewEventToken.s.sol:ViewEventToken --rpc-url [RPC_URL]
+```
+
+**Features:**
+
+- Automatically gets EventToken address from campaign
+- Shows token name, symbol, decimals, total supply, and cap
+- Handles cases where EventToken hasn't been created yet
+
+### 6. CloseExpiredCampaign.s.sol
+
+Script to close expired campaigns and trigger automatic refunds.
+
+**Usage:**
+
+```bash
+# Close expired campaign
+forge script script/CloseExpiredCampaign.s.sol:CloseExpiredCampaign --rpc-url [RPC_URL] --broadcast
+```
+
+**Features:**
+
+- Automatically refunds organizer deposit and all contributor funds
+- Shows campaign status before and after closing
+- Validates campaign is expired and not funded
+
+### 7. Config.s.sol
 
 Configuration script with predefined addresses for different networks.
+
+**Features:**
+
+- Network-specific configurations
+- Integration with AddressConstants for V4 addresses
+- Helper functions for PoolManager and PositionManager addresses
 
 ## 🔧 Network Configuration
 
