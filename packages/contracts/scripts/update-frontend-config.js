@@ -107,10 +107,21 @@ function updateFrontendConfig() {
     }
 
     // Find FundingManager deployment
-    const fundingManagerTx =
-      transactions.find(
-        (tx) => tx.contractName === "FundingManager" || tx.contractAddress
-      ) || transactions[0];
+    const fundingManagerTx = transactions.find(
+      (tx) => tx.contractName === "FundingManager"
+    );
+
+    if (!fundingManagerTx) {
+      log("❌ Could not find FundingManager transaction in broadcast file", "red");
+      log("   Available transactions:", "yellow");
+      transactions.forEach((tx, index) => {
+        log(
+          `   ${index}: ${tx.contractName || "Unknown"} - ${tx.contractAddress}`,
+          "yellow"
+        );
+      });
+      process.exit(1);
+    }
 
     const fundingManager = fundingManagerTx.contractAddress;
     const usdcAddress = fundingManagerTx.arguments?.[0];
