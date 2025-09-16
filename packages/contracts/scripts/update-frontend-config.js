@@ -136,6 +136,18 @@ function updateFrontendConfig() {
       process.exit(1);
     }
 
+    // Get StateView address from Config contract
+    let stateViewAddress = "0x0000000000000000000000000000000000000000";
+    try {
+      // We need to call the Config contract to get the StateView address
+      // For now, we'll use the known address for Base Sepolia
+      if (network === "84532") {
+        stateViewAddress = "0x571291b572ed32ce6751a2cb2486ebee8defb9b4";
+      }
+    } catch (err) {
+      log(`⚠️  Could not get StateView address: ${err.message}`, "yellow");
+    }
+
     log("✅ Extracted addresses:", "green");
     log(`   FundingManager: ${fundingManager}`, "green");
     if (usdcAddress) {
@@ -143,6 +155,7 @@ function updateFrontendConfig() {
     } else {
       log(`   USDC: Not found in broadcast file`, "yellow");
     }
+    log(`   StateView: ${stateViewAddress}`, "green");
 
     // Create frontend config file
     const frontendConfigPath = path.join(
@@ -181,31 +194,30 @@ function updateFrontendConfig() {
 export const CONTRACTS = {
   local: {
     fundingManager: "0x0000000000000000000000000000000000000000", // Placeholder for local
-    usdc: "0x0000000000000000000000000000000000000000" // Placeholder for local
+    usdc: "0x0000000000000000000000000000000000000000", // Placeholder for local
+    stateView: "0x0000000000000000000000000000000000000000" // Placeholder for local
   },
   baseSepolia: {
-    fundingManager: "0x0000000000000000000000000000000000000000", // Placeholder
-    usdc: "0x0000000000000000000000000000000000000000" // Placeholder
+    fundingManager: "${network === "84532" ? fundingManager : "0x0000000000000000000000000000000000000000"}",
+    usdc: "${network === "84532" ? (usdcAddress || "0x0000000000000000000000000000000000000000") : "0x0000000000000000000000000000000000000000"}",
+    stateView: "${network === "84532" ? stateViewAddress : "0x0000000000000000000000000000000000000000"}"
   },
   baseMainnet: {
     fundingManager: "0x0000000000000000000000000000000000000000", // Placeholder
-    usdc: "0x0000000000000000000000000000000000000000" // Placeholder
+    usdc: "0x0000000000000000000000000000000000000000", // Placeholder
+    stateView: "0x0000000000000000000000000000000000000000" // Placeholder
   },
   ethereumMainnet: {
     fundingManager: "0x0000000000000000000000000000000000000000", // Placeholder
-    usdc: "0x0000000000000000000000000000000000000000" // Placeholder
+    usdc: "0x0000000000000000000000000000000000000000", // Placeholder
+    stateView: "0x0000000000000000000000000000000000000000" // Placeholder
   },
   sepolia: {
     fundingManager: "0x0000000000000000000000000000000000000000", // Placeholder
-    usdc: "0x0000000000000000000000000000000000000000" // Placeholder
+    usdc: "0x0000000000000000000000000000000000000000", // Placeholder
+    stateView: "0x0000000000000000000000000000000000000000" // Placeholder
   }
 } as const;
-
-// Update the specific network with deployed addresses
-CONTRACTS.${networkKey} = {
-  fundingManager: "${fundingManager}",
-  usdc: "${usdcAddress || "0x0000000000000000000000000000000000000000"}"
-};
 
 export type Network = keyof typeof CONTRACTS;
 export type ContractAddresses = typeof CONTRACTS[Network];
@@ -268,6 +280,7 @@ NEXT_PUBLIC_FUNDING_MANAGER=${fundingManager}
 NEXT_PUBLIC_USDC_ADDRESS=${
       usdcAddress || "0x0000000000000000000000000000000000000000"
     }
+NEXT_PUBLIC_STATE_VIEW=${stateViewAddress}
 `;
 
     fs.writeFileSync(frontendEnvPath, envContent);
