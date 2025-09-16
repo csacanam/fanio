@@ -57,8 +57,5 @@ cache/
 artifacts/
 typechain/
 typechain-types/
-# Foundry broadcast files with timestamps
-packages/contracts/broadcast/*/84532/run-175*.json
-
 # Foundry broadcast files (completely ignore)
 packages/contracts/broadcast/
