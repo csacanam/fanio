@@ -59,3 +59,4 @@ typechain/
 typechain-types/
 # Foundry broadcast files (completely ignore)
 packages/contracts/broadcast/
+packages/contracts/broadcast/**
