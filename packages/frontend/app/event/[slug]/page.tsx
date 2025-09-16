@@ -1197,19 +1197,32 @@ export default function EventPage({ params }: EventPageProps) {
           isOpen={showTradingModal}
           onClose={() => setShowTradingModal(false)}
           tokenSymbol={balanceEventTokenSymbol || campaignData?.tokenSymbol || 'EVENT'}
-          currentPrice={
-            campaignData?.poolPrice && campaignData?.isEventTokenCurrency0 !== undefined
-              ? campaignData.isEventTokenCurrency0
+          currentPrice={(() => {
+            if (campaignData?.poolPrice && campaignData?.isEventTokenCurrency0 !== undefined) {
+              const price = campaignData.isEventTokenCurrency0
                 ? 1 / campaignData.poolPrice.price0Per1 // USDC per EventToken (invert EventToken per USDC)
-                : 1 / campaignData.poolPrice.price1Per0 // USDC per EventToken (invert EventToken per USDC)
-              : 1.0 // Fallback to 1.0 if no pool data
-          }
+                : 1 / campaignData.poolPrice.price1Per0; // USDC per EventToken (invert EventToken per USDC)
+              
+              console.log('🔍 Price Debug:');
+              console.log('  isEventTokenCurrency0:', campaignData.isEventTokenCurrency0);
+              console.log('  price0Per1 (EventToken per USDC):', campaignData.poolPrice.price0Per1);
+              console.log('  price1Per0 (USDC per EventToken):', campaignData.poolPrice.price1Per0);
+              console.log('  calculated currentPrice (USDC per EventToken):', price);
+              console.log('  Buy display (TSBOG per USDC):', 1 / price);
+              console.log('  Sell display (USDC per TSBOG):', price);
+              
+              return price;
+            }
+            return 1.0; // Fallback to 1.0 if no pool data
+          })()}
           onBuy={handleBuyTokens}
           onSell={handleSellTokens}
           usdcBalance={parseFloat(usdcBalance)}
           eventTokenBalance={parseFloat(eventTokenBalance)}
           isLoading={balancesLoading}
           initialMode={tradingMode}
+          poolKey={campaignData?.poolKey}
+          eventTokenAddress={campaignData?.eventToken}
         />
       </ClientOnly>
     </div>
