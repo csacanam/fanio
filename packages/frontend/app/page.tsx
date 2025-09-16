@@ -173,12 +173,21 @@ export default function FanioLanding() {
 
 
                 <div className="space-y-2 mb-4">
-                  <div className="flex justify-between text-sm">
-                      <span>${eventData.current.toLocaleString('en-US')} raised</span>
-                    <span>{(typeof eventData.progress === 'number' ? eventData.progress : 0).toFixed(2)}%</span>
-                  </div>
-                    <Progress value={eventData.progress} className="h-2 progress-bar-glow" />
-                    <p className="text-xs text-muted-foreground">Goal: ${eventData.target.toLocaleString('en-US')} USDC</p>
+                  {(() => {
+                    const progress = eventData && typeof eventData.current === 'number' && typeof eventData.target === 'number' && eventData.target > 0
+                      ? Math.min(100, (eventData.current / eventData.target) * 100)
+                      : 0;
+                    return (
+                      <>
+                        <div className="flex justify-between text-sm">
+                          <span>${eventData.current.toLocaleString('en-US')} raised</span>
+                          <span>{progress.toFixed(2)}%</span>
+                        </div>
+                        <Progress value={progress} className="h-2 progress-bar-glow" />
+                        <p className="text-xs text-muted-foreground">Goal: ${eventData.target.toLocaleString('en-US')} USDC</p>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 <div className="flex items-center justify-between text-sm text-muted-foreground">
