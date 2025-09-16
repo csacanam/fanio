@@ -59,4 +59,20 @@ contract Config is Script {
             revert("Unsupported network");
         }
     }
+
+    function getQuoterAddress() external view returns (address) {
+        if (block.chainid == 31337) {
+            // Local/Anvil - return address(0) to indicate it needs to be deployed
+            return address(0);
+        } else if (block.chainid == 84532) {
+            // Base Sepolia - return the Quoter address
+            return address(0x4a6513c898fe1b2d0e78d3b0e0a4a151589b1cba);
+        } else if (block.chainid == 8453) {
+            // Base Mainnet - return address(0) to indicate it needs to be deployed
+            return address(0);
+        } else {
+            // Unknown network
+            revert("Unsupported network");
+        }
+    }
 }

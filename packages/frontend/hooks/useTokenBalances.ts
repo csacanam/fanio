@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-import { CONTRACTS, DEFAULT_NETWORK } from '@/config/contracts';
+import { CONTRACTS, DEFAULT_NETWORK, getRpcUrl } from '@/config/contracts';
 import { useHydration } from './useHydration';
 
 // ABI for ERC20 tokens (USDC, EventToken)
@@ -46,7 +46,7 @@ export const useTokenBalances = (
       setBalances(prev => ({ ...prev, loading: true, error: null }));
 
       // Create provider for Base Sepolia
-      const provider = new ethers.JsonRpcProvider("https://sepolia.base.org");
+      const provider = new ethers.JsonRpcProvider(getRpcUrl(DEFAULT_NETWORK));
       
       // Get contract addresses
       const addresses = CONTRACTS[DEFAULT_NETWORK];

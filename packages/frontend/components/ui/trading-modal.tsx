@@ -6,6 +6,7 @@ import { Button } from './button'
 import { Input } from './input'
 import { Label } from './label'
 import { ArrowUpDown, TrendingUp, TrendingDown } from 'lucide-react'
+import { useQuoter } from '@/hooks/useQuoter'
 
 interface TradingModalProps {
   isOpen: boolean
@@ -18,6 +19,8 @@ interface TradingModalProps {
   eventTokenBalance: number
   isLoading?: boolean
   initialMode?: 'buy' | 'sell'
+  poolKey?: any // PoolKey for quoter
+  eventTokenAddress?: string // EventToken address for quoter
 }
 
 export function TradingModal({
@@ -30,12 +33,40 @@ export function TradingModal({
   usdcBalance,
   eventTokenBalance,
   isLoading = false,
-  initialMode = 'buy'
+  initialMode = 'buy',
+  poolKey,
+  eventTokenAddress
 }: TradingModalProps) {
   const [mode, setMode] = useState<'buy' | 'sell'>(initialMode)
   const [amount, setAmount] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [validationError, setValidationError] = useState<string>('')
+
+  // Determine zeroForOne based on mode and token order
+  const isEventTokenCurrency0 = poolKey?.currency0?.toLowerCase() === eventTokenAddress?.toLowerCase()
+  
+  // For buy: USDC → EventToken, for sell: EventToken → USDC
+  const zeroForOne = mode === 'buy' ? !isEventTokenCurrency0 : isEventTokenCurrency0
+
+  // Debug logs
+  if (amount && parseFloat(amount) > 0) {
+    console.log('🔍 Trading Modal Debug:');
+    console.log('  Mode:', mode);
+    console.log('  Amount:', amount);
+    console.log('  isEventTokenCurrency0:', isEventTokenCurrency0);
+    console.log('  zeroForOne:', zeroForOne);
+    console.log('  poolKey:', poolKey);
+    console.log('  eventTokenAddress:', eventTokenAddress);
+  }
+
+  // Use quoter for real-time quotes
+  const { quote } = useQuoter(
+    poolKey,
+    amount,
+    mode === 'buy' ? 6 : 18, // Input token decimals (USDC=6, EventToken=18)
+    mode === 'buy' ? 18 : 6,  // Output token decimals (EventToken=18, USDC=6)
+    zeroForOne
+  )
 
   // Update mode when initialMode changes
   useEffect(() => {
@@ -218,10 +249,15 @@ export function TradingModal({
                   {mode === 'buy' ? 'You\'ll Receive' : 'You\'ll Receive'}
                 </span>
                 <span className="font-semibold">
-                  {mode === 'buy' 
-                    ? `${parseFloat(amount).toFixed(2)} TSBOG`
-                    : `${totalCost.toFixed(2)} USDC`
-                  }
+                  {quote.loading ? (
+                    <span className="text-muted-foreground">Loading...</span>
+                  ) : quote.error ? (
+                    <span className="text-red-500">Error</span>
+                  ) : (
+                    mode === 'buy' 
+                      ? `${quote.formattedAmountOut} ${tokenSymbol}`
+                      : `${quote.formattedAmountOut} USDC`
+                  )}
                 </span>
               </div>
             )}

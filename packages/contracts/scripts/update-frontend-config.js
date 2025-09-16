@@ -148,6 +148,18 @@ function updateFrontendConfig() {
       log(`⚠️  Could not get StateView address: ${err.message}`, "yellow");
     }
 
+    // Get Quoter address from Config contract
+    let quoterAddress = "0x0000000000000000000000000000000000000000";
+    try {
+      // We need to call the Config contract to get the Quoter address
+      // For now, we'll use the known address for Base Sepolia
+      if (network === "84532") {
+        quoterAddress = "0x4a6513c898fe1b2d0e78d3b0e0a4a151589b1cba";
+      }
+    } catch (err) {
+      log(`⚠️  Could not get Quoter address: ${err.message}`, "yellow");
+    }
+
     log("✅ Extracted addresses:", "green");
     log(`   FundingManager: ${fundingManager}`, "green");
     if (usdcAddress) {
@@ -156,6 +168,7 @@ function updateFrontendConfig() {
       log(`   USDC: Not found in broadcast file`, "yellow");
     }
     log(`   StateView: ${stateViewAddress}`, "green");
+    log(`   Quoter: ${quoterAddress}`, "green");
 
     // Create frontend config file
     const frontendConfigPath = path.join(
@@ -195,7 +208,8 @@ export const CONTRACTS = {
   local: {
     fundingManager: "0x0000000000000000000000000000000000000000", // Placeholder for local
     usdc: "0x0000000000000000000000000000000000000000", // Placeholder for local
-    stateView: "0x0000000000000000000000000000000000000000" // Placeholder for local
+    stateView: "0x0000000000000000000000000000000000000000", // Placeholder for local
+    quoter: "0x0000000000000000000000000000000000000000" // Placeholder for local
   },
   baseSepolia: {
     fundingManager: "${
@@ -212,22 +226,30 @@ export const CONTRACTS = {
       network === "84532"
         ? stateViewAddress
         : "0x0000000000000000000000000000000000000000"
+    }",
+    quoter: "${
+      network === "84532"
+        ? quoterAddress
+        : "0x0000000000000000000000000000000000000000"
     }"
   },
   baseMainnet: {
     fundingManager: "0x0000000000000000000000000000000000000000", // Placeholder
     usdc: "0x0000000000000000000000000000000000000000", // Placeholder
-    stateView: "0x0000000000000000000000000000000000000000" // Placeholder
+    stateView: "0x0000000000000000000000000000000000000000", // Placeholder
+    quoter: "0x0000000000000000000000000000000000000000" // Placeholder
   },
   ethereumMainnet: {
     fundingManager: "0x0000000000000000000000000000000000000000", // Placeholder
     usdc: "0x0000000000000000000000000000000000000000", // Placeholder
-    stateView: "0x0000000000000000000000000000000000000000" // Placeholder
+    stateView: "0x0000000000000000000000000000000000000000", // Placeholder
+    quoter: "0x0000000000000000000000000000000000000000" // Placeholder
   },
   sepolia: {
     fundingManager: "0x0000000000000000000000000000000000000000", // Placeholder
     usdc: "0x0000000000000000000000000000000000000000", // Placeholder
-    stateView: "0x0000000000000000000000000000000000000000" // Placeholder
+    stateView: "0x0000000000000000000000000000000000000000", // Placeholder
+    quoter: "0x0000000000000000000000000000000000000000" // Placeholder
   }
 } as const;
 
@@ -293,6 +315,7 @@ NEXT_PUBLIC_USDC_ADDRESS=${
       usdcAddress || "0x0000000000000000000000000000000000000000"
     }
 NEXT_PUBLIC_STATE_VIEW=${stateViewAddress}
+NEXT_PUBLIC_QUOTER=${quoterAddress}
 `;
 
     fs.writeFileSync(frontendEnvPath, envContent);
