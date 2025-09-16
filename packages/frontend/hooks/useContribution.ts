@@ -244,12 +244,20 @@ export const useContribution = (campaignId: number = 0) => {
       console.log('Polling for raised amount update...');
       let newRaisedAmount;
       let attempts = 0;
-      const maxAttempts = 10; // Maximum attempts to prevent infinite loop
+      const maxAttempts = 15; // Increased attempts for better reliability
+      const baseDelay = 2000; // Start with 2 seconds delay
+      
+      // Get initial raised amount for comparison
+      const initialStatus = await fundingManager.getCampaignStatus(campaignId);
+      const initialRaisedAmount = initialStatus.raisedAmount;
+      console.log('Initial raised amount:', ethers.formatUnits(initialRaisedAmount, 6), 'USDC');
       
       while (attempts < maxAttempts) {
-        // Wait 1 second between attempts
+        // Wait with increasing delay for better reliability
         if (attempts > 0) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          const delay = baseDelay + (attempts * 1000); // 2s, 3s, 4s, 5s...
+          console.log(`Waiting ${delay}ms before attempt ${attempts + 1}...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
         
         const campaignStatus = await fundingManager.getCampaignStatus(campaignId);
@@ -257,7 +265,7 @@ export const useContribution = (campaignId: number = 0) => {
         console.log(`Raised amount check ${attempts + 1}:`, ethers.formatUnits(newRaisedAmount, 6), 'USDC');
         
         // Check if raised amount increased by at least our contribution
-        if (newRaisedAmount >= amountWei) {
+        if (newRaisedAmount >= initialRaisedAmount + amountWei) {
           console.log('Contribution confirmed successfully!');
           setTransactionHash(txHash);
           setSuccess(`Successfully contributed ${amount} USDC!`);

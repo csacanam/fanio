@@ -1,5 +1,5 @@
 // Auto-generated contract configuration
-// Updated on: 2025-09-15T22:55:34.777Z
+// Updated on: 2025-09-16T00:16:58.285Z
 // Network: Base Sepolia (84532)
 
 export const CONTRACTS = {
@@ -27,7 +27,7 @@ export const CONTRACTS = {
 
 // Update the specific network with deployed addresses
 CONTRACTS.baseSepolia = {
-  fundingManager: "0xfd515d43fe2ec09275fad7940147bceb3b400ae6",
+  fundingManager: "0x4b840c5893f32420966421678cbeaa01894dde03",
   usdc: "0xC8310baA6444e135f7BC54D698F0EE32Fa0621a3"
 };
 

@@ -886,7 +886,7 @@ export default function EventPage({ params }: EventPageProps) {
                       </div>
                       <Progress value={progressPercentage} className="h-3 progress-bar-glow" />
                       <div className="flex justify-between items-center mt-2">
-                        <p className="text-sm text-muted-foreground">{progressPercentage.toFixed(1)}% funded</p>
+                        <p className="text-sm text-muted-foreground">{progressPercentage.toFixed(2)}% funded</p>
                         <p className="text-sm text-muted-foreground">{demoEvent.backers.toLocaleString('en-US')} backers</p>
                       </div>
                     </>

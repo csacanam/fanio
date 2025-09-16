@@ -7,7 +7,8 @@ import { useHydration } from './useHydration';
 const FUNDING_MANAGER_ABI = [
   "function getCampaignStatus(uint256 campaignId) external view returns (bool isActive, bool isExpired, bool isFunded, uint256 timeLeft, uint256 raisedAmount, uint256 targetAmount, uint256 organizerDeposit, address fundingToken, uint256 protocolFeesCollected, uint256 uniqueBackers)",
   "function getCampaignEventToken(uint256 campaignId) external view returns (address eventToken)",
-  "function getCampaignGoal(uint256 campaignId) external view returns (uint256)"
+  "function getCampaignGoal(uint256 campaignId) external view returns (uint256)",
+  "function getCampaignPool(uint256 campaignId) external view returns (tuple(address currency0, address currency1, uint24 fee, int24 tickSpacing, address hooks) poolKey)"
 ];
 
 // ABI for USDC contract (simplified)
@@ -21,6 +22,14 @@ const EVENT_TOKEN_ABI = [
   "function name() external view returns (string)",
   "function symbol() external view returns (string)"
 ];
+
+export interface PoolKey {
+  currency0: string;
+  currency1: string;
+  fee: number;
+  tickSpacing: number;
+  hooks: string;
+}
 
 export interface CampaignData {
   isActive: boolean;
@@ -40,6 +49,7 @@ export interface CampaignData {
   progress: number;
   daysLeft: number;
   hoursLeft: number;
+  poolKey?: PoolKey; // Pool information when market is open
 }
 
 export const useCampaign = (campaignId: number = 0) => {
@@ -99,6 +109,40 @@ export const useCampaign = (campaignId: number = 0) => {
           console.warn('Could not fetch EventToken name/symbol, using defaults');
         }
       }
+
+      // Get pool information if campaign is funded (market is open)
+      let poolKey: PoolKey | undefined = undefined;
+      if (status.isFunded) {
+        try {
+          const poolData = await fundingManager.getCampaignPool(campaignId);
+          poolKey = {
+            currency0: poolData.currency0,
+            currency1: poolData.currency1,
+            fee: Number(poolData.fee),
+            tickSpacing: Number(poolData.tickSpacing),
+            hooks: poolData.hooks
+          };
+          
+          // Log pool information to console
+          console.log('🏊 Pool Information (Market Open):');
+          console.log('  PoolKey:', poolKey);
+          console.log('  Currency0:', poolKey.currency0);
+          console.log('  Currency1:', poolKey.currency1);
+          console.log('  Fee:', poolKey.fee);
+          console.log('  Tick Spacing:', poolKey.tickSpacing);
+          console.log('  Hooks:', poolKey.hooks);
+          
+          // Calculate and log PoolId
+          const poolId = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(
+            ['address', 'address', 'uint24', 'int24', 'address'],
+            [poolKey.currency0, poolKey.currency1, poolKey.fee, poolKey.tickSpacing, poolKey.hooks]
+          ));
+          console.log('  PoolId:', poolId);
+          
+        } catch (err) {
+          console.warn('Could not fetch pool information:', err);
+        }
+      }
       
       // Get USDC decimals
       const usdcDecimals = await usdc.decimals();
@@ -113,7 +157,7 @@ export const useCampaign = (campaignId: number = 0) => {
 
       // Calculate progress based on real campaign goal (not organizer target)
       const progress = campaignGoal > 0 
-        ? Number((status.raisedAmount * BigInt(100)) / campaignGoal)
+        ? Number((status.raisedAmount * BigInt(10000)) / campaignGoal) / 100 // Multiply by 10000, then divide by 100 to get 2 decimal places
         : 0;
 
       // Calculate time remaining
@@ -138,7 +182,8 @@ export const useCampaign = (campaignId: number = 0) => {
         tokenSymbol,
         progress,
         daysLeft,
-        hoursLeft
+        hoursLeft,
+        poolKey
       };
 
       setCampaignData(data);

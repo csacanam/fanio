@@ -56,6 +56,9 @@ contract DeployFundingManager is Script {
                 positionManager
             );
 
+            // Transfer authorization from deployer to FundingManager
+            dynamicFeeHook.setAuthorizedCaller(address(fundingManager));
+
             vm.stopBroadcast();
 
             // Print deployment addresses (Foundry standard)
@@ -101,6 +104,9 @@ contract DeployFundingManager is Script {
                 address(dynamicFeeHook),
                 positionManager
             );
+
+            // Transfer authorization from deployer to FundingManager
+            dynamicFeeHook.setAuthorizedCaller(address(fundingManager));
 
             vm.stopBroadcast();
 

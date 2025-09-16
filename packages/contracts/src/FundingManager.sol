@@ -144,6 +144,10 @@ contract FundingManager is ReentrancyGuard {
     /// @dev Tracks all contributors for each campaign for automatic refunds
     mapping(uint256 => address[]) public campaignContributors;
 
+    /// @notice Mapping from campaign ID to PoolKey for Uniswap V4 pool
+    /// @dev Stores pool information for secondary market trading
+    mapping(uint256 => PoolKey) public campaignPools;
+
     /// @notice Next available campaign ID (auto-incrementing)
     /// @dev Used to generate unique campaign identifiers
     uint256 public nextCampaignId;
@@ -756,7 +760,21 @@ contract FundingManager is ReentrancyGuard {
         return campaigns[campaignId].eventToken;
     }
 
-
+    /**
+     * @dev Get PoolKey information for a specific campaign's Uniswap V4 pool
+     *
+     * @param campaignId ID of the campaign
+     * @return PoolKey containing pool configuration for secondary market trading
+     *
+     * @notice Returns empty PoolKey if pool hasn't been created yet
+     * @notice Pool is only created when campaign reaches its funding goal
+     * @notice Use this information to interact with Uniswap V4 for swaps
+     */
+    function getCampaignPool(
+        uint256 campaignId
+    ) external view returns (PoolKey memory) {
+        return campaignPools[campaignId];
+    }
 
     /**
      * @dev Initialize Uniswap V4 pool with DynamicFeeHook and add initial liquidity
@@ -795,6 +813,9 @@ contract FundingManager is ReentrancyGuard {
 
         dynamicFeeHook.setEventToken(key, campaign.eventToken);
         _addInitialLiquidity(key, pc,campaign, fundingAmount, tokenAmount);
+        
+        // Store pool information for frontend access (after successful initialization)
+        campaignPools[campaignId] = key;
         
         emit PoolInitialized(campaignId, address(poolManager), key);
     }
