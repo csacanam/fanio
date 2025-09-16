@@ -175,7 +175,7 @@ export default function FanioLanding() {
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between text-sm">
                       <span>${eventData.current.toLocaleString('en-US')} raised</span>
-                    <span>{eventData.progress.toFixed(2)}%</span>
+                    <span>{(typeof eventData.progress === 'number' ? eventData.progress : 0).toFixed(2)}%</span>
                   </div>
                     <Progress value={eventData.progress} className="h-2 progress-bar-glow" />
                     <p className="text-xs text-muted-foreground">Goal: ${eventData.target.toLocaleString('en-US')} USDC</p>
