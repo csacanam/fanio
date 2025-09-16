@@ -198,9 +198,21 @@ export const CONTRACTS = {
     stateView: "0x0000000000000000000000000000000000000000" // Placeholder for local
   },
   baseSepolia: {
-    fundingManager: "${network === "84532" ? fundingManager : "0x0000000000000000000000000000000000000000"}",
-    usdc: "${network === "84532" ? (usdcAddress || "0x0000000000000000000000000000000000000000") : "0x0000000000000000000000000000000000000000"}",
-    stateView: "${network === "84532" ? stateViewAddress : "0x0000000000000000000000000000000000000000"}"
+    fundingManager: "${
+      network === "84532"
+        ? fundingManager
+        : "0x0000000000000000000000000000000000000000"
+    }",
+    usdc: "${
+      network === "84532"
+        ? usdcAddress || "0x0000000000000000000000000000000000000000"
+        : "0x0000000000000000000000000000000000000000"
+    }",
+    stateView: "${
+      network === "84532"
+        ? stateViewAddress
+        : "0x0000000000000000000000000000000000000000"
+    }"
   },
   baseMainnet: {
     fundingManager: "0x0000000000000000000000000000000000000000", // Placeholder

@@ -1197,7 +1197,13 @@ export default function EventPage({ params }: EventPageProps) {
           isOpen={showTradingModal}
           onClose={() => setShowTradingModal(false)}
           tokenSymbol={balanceEventTokenSymbol || campaignData?.tokenSymbol || 'EVENT'}
-          currentPrice={1.20} // TODO: Get real price from contract
+          currentPrice={
+            campaignData?.poolPrice && campaignData?.isEventTokenCurrency0 !== undefined
+              ? campaignData.isEventTokenCurrency0
+                ? 1 / campaignData.poolPrice.price0Per1 // USDC per EventToken (invert EventToken per USDC)
+                : 1 / campaignData.poolPrice.price1Per0 // USDC per EventToken (invert EventToken per USDC)
+              : 1.0 // Fallback to 1.0 if no pool data
+          }
           onBuy={handleBuyTokens}
           onSell={handleSellTokens}
           usdcBalance={parseFloat(usdcBalance)}

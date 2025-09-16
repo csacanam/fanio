@@ -139,7 +139,12 @@ export function TradingModal({
           {/* Price Info */}
           <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
             <span className="text-sm text-muted-foreground">Current Price</span>
-            <span className="font-semibold">${currentPrice.toFixed(2)} USDC</span>
+            <span className="font-semibold">
+              {mode === 'buy' 
+                ? `${(1 / currentPrice).toFixed(6)} ${tokenSymbol} per USDC`
+                : `${currentPrice.toFixed(6)} USDC per ${tokenSymbol}`
+              }
+            </span>
           </div>
 
           {/* Balance Info */}
