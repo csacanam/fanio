@@ -185,6 +185,12 @@ sequenceDiagram
 
 ---
 
+## 🤝 Partner Integrations
+
+**No partner integrations.**
+
+---
+
 ## 🚀 Getting Started
 
 ### Prerequisites
