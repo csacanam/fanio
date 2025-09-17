@@ -14,6 +14,10 @@ Fanio enables event organizers to create crowdfunding campaigns where contributo
 - ✅ **Automatic refund system** for expired campaigns
 - ✅ **20% excess funding** for pool liquidity
 - ✅ **Organizer deposit** (10% of target) as guarantee
+- ✅ **Frontend Integration** - Complete web interface with real-time trading
+- ✅ **Live Trading** - Real Uniswap V4 swap execution via Universal Router
+- ✅ **Wallet Integration** - MetaMask connection with network detection
+- ✅ **Transaction Management** - User-friendly transaction feedback
 
 ## Architecture
 
@@ -314,7 +318,7 @@ packages/contracts/
 │   ├── update-config.js         # Updates Config.s.sol
 │   ├── update-frontend-config.js # Updates frontend
 │   └── README.md
-├── test/                        # Test suite
+├── test/                        # Test suite (21 tests, 100% passing)
 │   ├── FundingManager.t.sol
 │   ├── EventToken.t.sol
 │   ├── DynamicFeeHook.t.sol
@@ -327,9 +331,42 @@ packages/contracts/
 │   └── hookmate/                # Hookmate utilities
 └── broadcast/                   # Deployment files
     └── DeployFundingManager.s.sol/
-        ├── 84532/              # Base Sepolia
+        ├── 84532/              # Base Sepolia ✅ DEPLOYED
         ├── 8453/               # Base Mainnet
         └── 31337/              # Local/Anvil
+```
+
+## Frontend Integration ✅ IMPLEMENTED
+
+The contracts are fully integrated with a Next.js frontend application:
+
+- **Real-time Quotes** - Live pricing from Uniswap V4 Quoter
+- **Live Trading** - Execute real swaps using Universal Router
+- **Wallet Integration** - MetaMask connection with network detection
+- **Transaction Management** - User-friendly transaction feedback
+- **Balance Updates** - Real-time token balance management
+
+### Frontend Structure
+
+```
+packages/frontend/
+├── app/                         # Next.js App Router
+├── components/                  # React components
+│   ├── ui/                     # Reusable UI components
+│   │   ├── trading-modal.tsx   # Main trading interface
+│   │   └── transaction-result-modal.tsx # Transaction feedback
+├── hooks/                      # Custom React hooks
+│   ├── useCampaign.ts          # Campaign data management
+│   ├── useQuoter.ts            # Uniswap V4 quotes
+│   ├── useUniswapV4Swap.ts    # Swap execution
+│   ├── useWallet.ts            # Wallet connection
+│   └── useTokenBalances.ts     # Token balance management
+├── lib/                        # Utility libraries
+│   ├── sdk-core/               # Uniswap SDK Core (adapted)
+│   ├── v4-sdk/                 # Uniswap V4 SDK (adapted)
+│   └── universal-router-sdk/   # Universal Router SDK (adapted)
+└── config/                     # Configuration
+    └── contracts.ts            # Contract addresses
 ```
 
 ## Configuration
@@ -498,8 +535,27 @@ forge config
 
 - [Deployment Scripts](script/README.md)
 - [Automation Scripts](scripts/README.md)
+- [Frontend Documentation](../frontend/README.md) ✅ NEW
 - [Foundry Documentation](https://book.getfoundry.sh/)
 - [Uniswap V4 Documentation](https://docs.uniswap.org/sdk/v4/overview)
+
+## Live Demo ✅ AVAILABLE
+
+The complete Fanio platform is now live and functional:
+
+- **Frontend**: Complete Next.js web application
+- **Trading**: Real Uniswap V4 swap execution
+- **Wallet**: MetaMask integration
+- **Network**: Base Sepolia testnet
+- **Status**: Ready for testing and demonstration
+
+### How to Test
+
+1. **Connect Wallet**: Install MetaMask and connect to Base Sepolia
+2. **Get Testnet Tokens**: Use Base Sepolia faucet for ETH and USDC
+3. **Create Campaign**: Use the frontend to create a test campaign
+4. **Execute Swaps**: Test real trading functionality
+5. **View Results**: Check transaction results on BaseScan
 
 ## Contributing
 

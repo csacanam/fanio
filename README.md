@@ -145,10 +145,11 @@ Fanio turns every event into a liquid digital asset.
 - **Token Minting**: Controlled EventToken creation with ERC20Capped
 - **Test Suite**: 21 comprehensive tests (100% passing)
 - **Documentation**: Complete technical documentation
-
-### 🚧 In Development
-
-- **Frontend Integration**: Web interface for campaign management
+- **Frontend Application**: Complete Next.js web interface
+- **Real-time Trading**: Live Uniswap V4 swap execution
+- **Wallet Integration**: MetaMask connection with network detection
+- **Transaction Management**: User-friendly transaction feedback
+- **Balance Updates**: Real-time token balance management
 - **Deployment Scripts**: Production deployment automation
 
 ---
@@ -184,19 +185,35 @@ fanio/
 │   │   ├── src/           # Source contracts
 │   │   │   ├── FundingManager.sol    # Core crowdfunding contract
 │   │   │   ├── EventToken.sol        # ERC20Capped event tokens
-│   │   │   └── DynamicFeeHook.sol    # Uniswap V4 fee hook
-│   │   ├── test/          # Comprehensive test suite
+│   │   │   ├── DynamicFeeHook.sol    # Uniswap V4 fee hook
+│   │   │   └── libraries/            # Contract libraries
+│   │   ├── test/          # Comprehensive test suite (21 tests)
 │   │   │   ├── FundingManager.t.sol
 │   │   │   ├── EventToken.t.sol
 │   │   │   ├── DynamicFeeHook.t.sol
 │   │   │   └── FundingManagerPoolIntegration.t.sol
 │   │   ├── script/        # Deployment scripts
 │   │   └── lib/           # Dependencies (Uniswap V4, OpenZeppelin)
-│   └── frontend/           # Next.js web application
+│   └── frontend/           # Next.js web application ✅ IMPLEMENTED
 │       ├── app/           # Next.js app router
+│       │   └── event/[slug]/ # Dynamic event pages
 │       ├── components/    # React components
+│       │   ├── ui/        # Reusable UI components
+│       │   │   ├── trading-modal.tsx        # Main trading interface
+│       │   │   └── transaction-result-modal.tsx # Transaction feedback
+│       │   └── theme-provider.tsx # Theme management
 │       ├── hooks/         # Custom React hooks
-│       ├── lib/          # Utility functions
+│       │   ├── useCampaign.ts        # Campaign data management
+│       │   ├── useQuoter.ts          # Uniswap V4 quotes
+│       │   ├── useUniswapV4Swap.ts  # Swap execution
+│       │   ├── useWallet.ts          # Wallet connection
+│       │   └── useTokenBalances.ts   # Token balance management
+│       ├── lib/          # Utility libraries
+│       │   ├── sdk-core/             # Uniswap SDK Core (adapted)
+│       │   ├── v4-sdk/               # Uniswap V4 SDK (adapted)
+│       │   └── universal-router-sdk/ # Universal Router SDK (adapted)
+│       ├── config/       # Configuration
+│       │   └── contracts.ts          # Contract addresses
 │       └── public/       # Static assets
 ```
 
@@ -245,18 +262,28 @@ fanio/
 5. **Open your browser**
    Navigate to `http://localhost:3000`
 
+6. **Connect your wallet**
+   - Install MetaMask browser extension
+   - Connect to Base Sepolia testnet
+   - Get testnet ETH from Base Sepolia faucet
+   - Get testnet USDC for testing swaps
+
 ---
 
 ## 🛠️ Tech Stack
 
-### Frontend
+### Frontend ✅ IMPLEMENTED
 
-- **Next.js 15** - React framework
-- **TypeScript** - Type safety
-- **Tailwind CSS** - Styling
-- **Radix UI** - Component primitives
+- **Next.js 15** - React framework with App Router
+- **React 19** - Latest React with concurrent features
+- **TypeScript** - Full type safety
+- **Tailwind CSS** - Utility-first styling
+- **Radix UI** - Accessible component primitives
 - **React Hook Form** - Form management
 - **Zod** - Schema validation
+- **Ethers.js v6** - Blockchain interaction
+- **Uniswap V4 SDK** - Custom adapted for ethers v6
+- **Universal Router SDK** - Custom adapted for ethers v6
 
 ### Blockchain ✅ IMPLEMENTED
 
