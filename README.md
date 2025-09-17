@@ -154,6 +154,12 @@ Fanio turns every event into a liquid digital asset.
 
 ---
 
+## 🤝 Partner Integrations
+
+**No partner integrations.**
+
+---
+
 ## 🔑 Governance and Future
 
 - **$EVENT**: One-time token per show. Fans fund and share upside of specific events
