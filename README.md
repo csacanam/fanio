@@ -1,41 +1,43 @@
 # 🎟️ Fanio
 
-**From fans to stakeholders.**
+**Zora for Live Concerts**
 
-Trustless crowdfunding for live events powered by Uniswap v4 hooks.
+From fans to stakeholders.
+
+Trustless funding for live concerts powered by Uniswap v4 hooks.
 
 ---
 
 ## 🛑 The Problem
 
-The live events industry has structural inefficiencies:
+**Promoters are stuck in cash flow hell.**
 
-### Cash Flow Challenges
+### The Promoter's Nightmare
 
-- **Ticketing platforms** hold ticket revenue until after the show
-- **Organizers** need upfront capital for venues, deposits, and artist advances
-- **High borrowing costs** reduce margins and increase financial risk
+- **You need $100k upfront** for venue deposits, artist advances, and production costs
+- **Ticket revenue is locked** by ticketing platforms until after the show
+- **You're forced to borrow** at high interest rates or risk losing the event
+- **If tickets don't sell out**, you lose everything while platforms keep their fees
 
-### Risk Concentration
+### The Broken System
 
-- **Promoters** bear all financial risk if events don't sell out
-- **Fans** have no way to express early interest or participate in funding
-- **Value capture** flows to platforms rather than creators and supporters
+- **Ticketing platforms** hold your money hostage for months
+- **Fans can't help** even if they desperately want the show to happen
+- **All risk falls on you** while platforms capture value without risk
+- **No way to validate demand** before committing massive capital
 
-### Limited Fan Engagement
+### The Result
 
-- Fans are passive consumers rather than active participants
-- No mechanism for early supporters to benefit from event success
-- Missed opportunity for community-driven event creation
+**Promoters go broke, fans miss out, and ticketing platforms get rich.**
 
 ---
 
 ## 🧩 First Principles
 
-1. **The fan is the true creator of value**
-2. **The organizer needs early and transparent cash flow**
-3. **Blockchain enables removing intermediaries and programming automatic fund distribution**
-4. **Event tokens must be useful and transferable: early access, discounts, resale**
+1. **Fans should fund what they want to see** - not just buy tickets after the fact
+2. **Promoters need upfront capital** - not locked revenue from ticketing platforms
+3. **Blockchain removes intermediaries** - direct fan-to-promoter funding with automatic distribution
+4. **Early supporters get real benefits** - tokens with utility, not just speculation
 
 ---
 
@@ -48,14 +50,13 @@ Fanio turns every event into a liquid digital asset through crowdfunding campaig
 1. **Campaign Creation**: Organizer creates a campaign with target amount and funding token (USDC)
 2. **Fan Funding**: Fans contribute USDC to reach the target, receiving EventTokens 1:1
 3. **Campaign Success**: If target is reached, organizer gets full funding upfront
-4. **Automatic Liquidity**: Pool is created on Uniswap V4 with excess funds + EventTokens
+4. **Automatic Liquidity**: Pool is created on Uniswap V4 with 20% excess funds + 20% EventTokens
 5. **Secondary Market**: Fans can trade EventTokens with dynamic fees (1% buy, 10% sell)
 
 ### Inspirations
 
-- **Kickstarter**: All-or-nothing funding model
-- **Zora**: Automatic liquidity preservation
-- **Uniswap v4**: Neutral infrastructure for programmed swap distribution
+- **Kickstarter**: All-or-nothing crowdfunding model
+- **Zora**: Automatic liquidity preservation (but for concerts)
 
 ---
 
@@ -64,37 +65,42 @@ Fanio turns every event into a liquid digital asset through crowdfunding campaig
 ### 📋 Campaign Phase ($100k Target)
 
 **Setup:**
+
 - **Target**: $100k USDC
 - **Organizer Deposit**: $10k USDC (10% upfront)
 - **Fans Contribute**: $120k USDC (20% over target)
 
 **Process:**
+
 - **EventToken Minting**: 1:1 ratio with USDC contributed
   - $120k USDC raised → 120k EventTokens minted to contributors
 - **Campaign Success**: When target is reached, campaign finalizes
 
 **Finalization:**
+
 - **Protocol Fee**: $10k USDC (from organizer's deposit)
 - **Net to Organizer**: $100k USDC (full target amount)
-- **Pool Creation**: 25k EventTokens + $20k excess USDC for Uniswap V4
+- **Pool Creation**: 20k EventTokens + $20k excess USDC for Uniswap V4
 
 ### 🎯 Post-Campaign Pool
 
 **Pool Composition:**
-- **USDC Side**: $120k USDC ($100k from organizer + $20k excess)
-- **EventToken Side**: 25k EventTokens (minted for pool)
-- **Initial Price**: $4.8 per EventToken ($120k ÷ 25k tokens)
+
+- **USDC Side**: $20k USDC (excess funding)
+- **EventToken Side**: 20k EventTokens (minted for pool)
+- **Initial Price**: $1.0 per EventToken ($20k ÷ 20k tokens)
 
 **Final Distribution:**
+
 - **Contributors Hold**: 120k EventTokens
-- **Pool Holds**: 25k EventTokens
-- **Total Supply**: 145k EventTokens (fixed forever)
+- **Pool Holds**: 20k EventTokens
+- **Total Supply**: 140k EventTokens (fixed forever)
 
 **Trading Dynamics:**
+
 - **Dynamic Fees**: 1% buy fee, 10% sell fee (protects token value)
 - **Buy Pressure**: Fans buy EventTokens with USDC
 - **Sell Pressure**: Contributors sell EventTokens for USDC
-- **Pool Strengthening**: Each trade adds permanent liquidity
 
 ---
 
@@ -110,7 +116,6 @@ Fanio turns every event into a liquid digital asset through crowdfunding campaig
 **Note**: Specific utilities and pricing (e.g., "1 perk = 100 $EVENT tokens") will be determined in collaboration with event organizers. This creates a flexible framework where each event can define its own token economy.
 
 **Fans don't just speculate—they gain real event benefits and influence.**
-
 
 ---
 
@@ -129,28 +134,6 @@ Fanio turns every event into a liquid digital asset through crowdfunding campaig
 ## 🤝 Partner Integrations
 
 **No partner integrations.**
-
----
-
-## 🔑 Governance and Future
-
-- **$EVENT**: One-time token per show. Fans fund and share upside of specific events
-- **$ORG** (future): Reputation and governance for recurring organizers
-
----
-
-## ✅ Why Fanio is Revolutionary
-
-### Organizer Benefits vs Traditional Model:
-
-1. **Immediate Liquidity**: Receives 100% of goal upfront if campaign succeeds
-2. **No Debt or Interest**: Avoids costly advances
-3. **Clear and Lower Fees**: 10% fixed vs 15% from ticketing platforms
-4. **Engaged Fans**: Those who finance events become natural ambassadors holding utility tokens
-
-**Result**: More cash, less risk, stronger fan engagement.
-
-> _"Fans don't just buy tickets, they fund the show."_
 
 ---
 
