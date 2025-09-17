@@ -8,27 +8,25 @@ Trustless crowdfunding for live events powered by Uniswap v4 hooks.
 
 ## 🛑 The Problem
 
-The live events industry faces critical structural frictions:
+The live events industry has structural inefficiencies:
 
-### Ticketing Custody of Money
+### Cash Flow Challenges
 
-- Ticketing platforms sell tickets and hold money until after the show
-- Organizers need upfront liquidity for venues, logistics, and artists
-- To access advances, they must borrow or pay high interest → reduced margins and higher risk
+- **Ticketing platforms** hold ticket revenue until after the show
+- **Organizers** need upfront capital for venues, deposits, and artist advances
+- **High borrowing costs** reduce margins and increase financial risk
 
-### High Risk Concentrated on Promoters
+### Risk Concentration
 
-- Promoters bet capital hoping artists will sell enough tickets
-- If break-even point isn't reached, they lose money
-- Financial risk falls entirely on organizers
+- **Promoters** bear all financial risk if events don't sell out
+- **Fans** have no way to express early interest or participate in funding
+- **Value capture** flows to platforms rather than creators and supporters
 
-### Fans Without a Voice
+### Limited Fan Engagement
 
-- Fans, the true drivers of demand, cannot express prior interest
-- No participation in funding decisions
-- Passive role in event creation
-
-**Result:** Promoters run out of cash, fans remain passive, and ticketing platforms capture the value.
+- Fans are passive consumers rather than active participants
+- No mechanism for early supporters to benefit from event success
+- Missed opportunity for community-driven event creation
 
 ---
 
@@ -43,15 +41,15 @@ The live events industry faces critical structural frictions:
 
 ## 💡 Solution: Fanio
 
-Fanio turns every event into a liquid digital asset.
+Fanio turns every event into a liquid digital asset through crowdfunding campaigns.
 
 ### How It Works
 
-1. **Event Token Creation**: Each show issues an EventToken (`$EVENT`)
-2. **Fan Funding**: Fans fund the show by buying `$EVENT` during the pre-funding phase
-3. **Organizer Payment**: Organizer receives their full target in USDC if the goal is reached
-4. **Automatic Liquidity**: A liquidity pool is automatically created on Uniswap v4 with a special hook, guaranteeing a secondary market
-5. **Fair Revenue**: Fanio revenue model with transparent fees (10% in USDC + percentage in swap fees)
+1. **Campaign Creation**: Organizer creates a campaign with target amount and funding token (USDC)
+2. **Fan Funding**: Fans contribute USDC to reach the target, receiving EventTokens 1:1
+3. **Campaign Success**: If target is reached, organizer gets full funding upfront
+4. **Automatic Liquidity**: Pool is created on Uniswap V4 with excess funds + EventTokens
+5. **Secondary Market**: Fans can trade EventTokens with dynamic fees (1% buy, 10% sell)
 
 ### Inspirations
 
@@ -61,49 +59,42 @@ Fanio turns every event into a liquid digital asset.
 
 ---
 
-## 🚀 Campaign Process & Tokenomics
+## 🚀 How It Works: Complete Example
 
-### 📋 Campaign Phase (Funding)
+### 📋 Campaign Phase ($100k Target)
 
-**1. Campaign Setup**
+**Setup:**
+- **Target**: $100k USDC
+- **Organizer Deposit**: $10k USDC (10% upfront)
+- **Fans Contribute**: $120k USDC (20% over target)
 
-- **Target**: Organizer sets a target amount (e.g., $100k USDC)
-- **Organizer Deposit**: 10% of target required upfront (e.g., $10k USDC)
-- **Funding Cap**: Maximum 20% over target allowed (e.g., $120k USDC max)
-
-**2. During Campaign**
-
-- **Contributions**: Fans contribute USDC to reach target
+**Process:**
 - **EventToken Minting**: 1:1 ratio with USDC contributed
-  - If $120k USDC raised → 120k EventTokens minted to contributors
+  - $120k USDC raised → 120k EventTokens minted to contributors
 - **Campaign Success**: When target is reached, campaign finalizes
 
-**3. Campaign Finalization**
+**Finalization:**
+- **Protocol Fee**: $10k USDC (from organizer's deposit)
+- **Net to Organizer**: $100k USDC (full target amount)
+- **Pool Creation**: 25k EventTokens + $20k excess USDC for Uniswap V4
 
-- **Protocol Fee**: 10% of target in USDC (e.g., $10k from organizer's deposit)
-- **Net to Organizer**: Full target amount (e.g., $100k USDC)
-- **Pool Creation**: 25% of target in EventTokens + excess USDC for Uniswap V4
-  - If $100k target → 25k EventTokens + $20k excess USDC for pool liquidity
-
-### 🎯 Post-Campaign Tokenomics
-
-**EventToken Distribution:**
-
-- **Pre-funding Tokens**: 120k EventTokens (held by contributors)
-- **Pool Tokens**: 25k EventTokens (for Uniswap V4 liquidity)
-- **Total Supply**: 145k EventTokens (fixed, no more minting)
+### 🎯 Post-Campaign Pool
 
 **Pool Composition:**
-
-- **USDC Side**: $120k USDC ($100k from organizer + $20k excess from campaign)
+- **USDC Side**: $120k USDC ($100k from organizer + $20k excess)
 - **EventToken Side**: 25k EventTokens (minted for pool)
 - **Initial Price**: $4.8 per EventToken ($120k ÷ 25k tokens)
 
-**Trading Dynamics:**
+**Final Distribution:**
+- **Contributors Hold**: 120k EventTokens
+- **Pool Holds**: 25k EventTokens
+- **Total Supply**: 145k EventTokens (fixed forever)
 
+**Trading Dynamics:**
+- **Dynamic Fees**: 1% buy fee, 10% sell fee (protects token value)
 - **Buy Pressure**: Fans buy EventTokens with USDC
 - **Sell Pressure**: Contributors sell EventTokens for USDC
-- **Dynamic Fees**: 1% buy fee, 10% sell fee (protects token value)
+- **Pool Strengthening**: Each trade adds permanent liquidity
 
 ---
 
@@ -120,44 +111,6 @@ Fanio turns every event into a liquid digital asset.
 
 **Fans don't just speculate—they gain real event benefits and influence.**
 
----
-
-
-## 📊 Complete Example: $100k Target Campaign
-
-### 📋 Campaign Phase
-
-**Setup:**
-
-- **Target**: $100k USDC
-- **Organizer Deposit**: $10k USDC (10% upfront)
-- **Fans Contribute**: $120k USDC (20% over target)
-
-**Finalization:**
-
-- **Protocol Fee**: $10k USDC (from organizer's deposit)
-- **Net to Organizer**: $100k USDC (full target amount)
-- **EventTokens Minted**: 120k tokens (1:1 with USDC raised)
-
-### 🎯 Post-Campaign Pool
-
-**Pool Creation:**
-
-- **USDC Side**: $120k USDC ($100k from organizer + $20k excess)
-- **EventToken Side**: 25k EventTokens (25% of target)
-- **Initial Price**: $4.8 per EventToken
-
-**Final Distribution:**
-
-- **Contributors Hold**: 120k EventTokens
-- **Pool Holds**: 25k EventTokens
-- **Total Supply**: 145k EventTokens (fixed forever)
-
-**Trading Dynamics:**
-- **Dynamic Fees**: 1% buy fee, 10% sell fee (protects token value)
-- **Buy Pressure**: Fans buy EventTokens with USDC
-- **Sell Pressure**: Contributors sell EventTokens for USDC
-- **Pool Strengthening**: Each trade adds permanent liquidity
 
 ---
 
@@ -319,41 +272,6 @@ fanio/
 - **EventToken** - ERC20Capped tokens for each event
 - **USDC** - Stable currency for funding
 - **Foundry** - Development and testing framework
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 🌟 Support
-
-If you find this project helpful, please give it a ⭐ on GitHub!
-
-For questions and support, reach out to us at [contact@fanio.io](mailto:contact@fanio.io)
-
----
-
-## 🔗 Links
-
-- [Website](https://fanio.io) (Coming Soon)
-- [Documentation](https://docs.fanio.io) (Coming Soon)
-- [Twitter](https://twitter.com/fanio_io) (Coming Soon)
-- [Discord](https://discord.gg/fanio) (Coming Soon)
 
 ---
 
