@@ -44,6 +44,67 @@ Fanio turns every event into a liquid digital asset through crowdfunding campaig
 4. **Automatic Liquidity**: Pool is created on Uniswap V4 with equal amounts of base currency and EventTokens (1:1 initial price)
 5. **Secondary Market**: Fans can trade EventTokens with dynamic fees (1% buy, 10% sell)
 
+### Inspirations
+
+- **Kickstarter**: All-or-nothing crowdfunding model
+- **Zora**: Automatic liquidity preservation (but for concerts)
+
+### Technical Flow
+
+```mermaid
+sequenceDiagram
+    participant P as Promoter
+    participant FM as FundingManager
+    participant ET as EventToken
+    participant F as Fans
+    participant U4 as Uniswap V4
+    participant DFH as DynamicFeeHook
+    participant P4 as Pool
+
+    Note over P, P4: 🎯 CAMPAIGN CREATION PHASE
+    P->>FM: createCampaign(targetAmount, eventName)
+    FM->>ET: deploy new EventToken(eventName, cap)
+    ET-->>FM: EventToken address
+    FM-->>P: Campaign created, EventToken deployed
+
+    Note over P, P4: 💰 FUNDING PHASE
+    loop Until target reached
+        F->>FM: contribute(amount)
+        FM->>ET: mint(contributor, amount)
+        ET-->>F: EventTokens minted 1:1
+        FM->>FM: update raisedAmount
+    end
+
+    Note over P, P4: ✅ CAMPAIGN SUCCESS
+    FM->>FM: finalizeCampaign()
+    FM->>P: transfer full target amount
+    FM->>FM: calculate pool allocation (20% of target)
+
+    Note over P, P4: 🏊 POOL CREATION & LIQUIDITY
+    FM->>U4: createPool(USDC, EventToken, DynamicFeeHook)
+    U4->>DFH: attach hook to pool
+    DFH-->>U4: Hook configured (1% buy, 10% sell)
+    U4-->>FM: Pool address
+
+    FM->>P4: addLiquidity(USDC, EventToken, equal amounts)
+    P4-->>FM: Liquidity added, pool active
+
+    Note over P, P4: 🔄 TRADING PHASE
+    loop Continuous trading
+        F->>P4: swap(USDC → EventToken)
+        P4->>DFH: calculateFee(swapDirection)
+        DFH-->>P4: 1% fee for buy
+        P4-->>F: EventTokens received
+
+        F->>P4: swap(EventToken → USDC)
+        P4->>DFH: calculateFee(swapDirection)
+        DFH-->>P4: 10% fee for sell
+        P4-->>F: USDC received
+    end
+```
+
+**The hook itself is simple — asymmetric fees. But the real technical challenge was orchestration. Fanio dynamically manages the entire lifecycle: A promoter creates a campaign, fans contribute until the target is reached, the FundingManager finalizes the campaign, creates a new Uniswap v4 pool, seeds liquidity, and attaches our DynamicFeeHook. Everything happens automatically, trustlessly, and onchain.**
+
 ---
 
 ## 🚀 How It Works: Complete Example
@@ -79,6 +140,21 @@ Fanio turns every event into a liquid digital asset through crowdfunding campaig
 - **Dynamic Fees**: 1% buy fee, 10% sell fee (protects token value)
 - **Buy Pressure**: Fans buy EventTokens with USDC
 - **Sell Pressure**: Contributors sell EventTokens for USDC
+
+---
+
+## 🎁 EventToken Utilities (Future Exploration)
+
+**$EVENT tokens could provide real utility beyond speculation:**
+
+- **Early Access**: Priority ticket purchasing
+- **Exclusive Perks**: Backstage passes, meet & greets, merchandise
+- **Voting Rights**: Influence show details (setlist, venue selection)
+- **Discounts**: Reduced prices on official tickets and merchandise
+
+**Note**: Specific utilities and pricing (e.g., "1 perk = 100 $EVENT tokens") are freely defined by promoters. This creates a flexible framework where each event can define its own token economy.
+
+**Fans don't just speculate—they gain real event benefits and influence.**
 
 ---
 
