@@ -66,85 +66,75 @@ Fanio turns every event into a liquid digital asset.
 ### 📋 Campaign Phase (Funding)
 
 **1. Campaign Setup**
+
 - **Target**: Organizer sets a target amount (e.g., $100k USDC)
 - **Organizer Deposit**: 10% of target required upfront (e.g., $10k USDC)
 - **Funding Cap**: Maximum 20% over target allowed (e.g., $120k USDC max)
 
 **2. During Campaign**
+
 - **Contributions**: Fans contribute USDC to reach target
 - **EventToken Minting**: 1:1 ratio with USDC contributed
   - If $120k USDC raised → 120k EventTokens minted to contributors
 - **Campaign Success**: When target is reached, campaign finalizes
 
 **3. Campaign Finalization**
+
 - **Protocol Fee**: 10% of target in USDC (e.g., $10k from organizer's deposit)
 - **Net to Organizer**: Full target amount (e.g., $100k USDC)
-- **Pool Creation**: 25% of target in EventTokens reserved for Uniswap V4
-  - If $100k target → 25k EventTokens for pool liquidity
+- **Pool Creation**: 25% of target in EventTokens + excess USDC for Uniswap V4
+  - If $100k target → 25k EventTokens + $20k excess USDC for pool liquidity
 
 ### 🎯 Post-Campaign Tokenomics
 
 **EventToken Distribution:**
+
 - **Pre-funding Tokens**: 120k EventTokens (held by contributors)
 - **Pool Tokens**: 25k EventTokens (for Uniswap V4 liquidity)
 - **Total Supply**: 145k EventTokens (fixed, no more minting)
 
 **Pool Composition:**
-- **USDC Side**: $100k USDC (from organizer's net proceeds)
+
+- **USDC Side**: $120k USDC ($100k from organizer + $20k excess from campaign)
 - **EventToken Side**: 25k EventTokens (minted for pool)
-- **Initial Price**: $4 per EventToken ($100k ÷ 25k tokens)
+- **Initial Price**: $4.8 per EventToken ($120k ÷ 25k tokens)
 
 **Trading Dynamics:**
+
 - **Buy Pressure**: Fans buy EventTokens with USDC
 - **Sell Pressure**: Contributors sell EventTokens for USDC
 - **Dynamic Fees**: 1% buy fee, 10% sell fee (protects token value)
 
 ---
 
-## 🎁 Possible Utilities of $EVENT
+## 🎁 EventToken Utilities (Future Exploration)
 
-- Early access to tickets
-- Discounts on official tickets
-- Redeemable for perks (merch, backstage, afterparty)
-- Voting on show details (setlist, merch design)
+**$EVENT tokens provide real utility beyond speculation:**
 
-**Fans don't just speculate with a liquid token—they also enjoy real event benefits.**
+- **Early Access**: Priority ticket purchasing
+- **Exclusive Perks**: Backstage passes, meet & greets, merchandise
+- **Voting Rights**: Influence show details (setlist, venue selection)
+- **Discounts**: Reduced prices on official tickets and merchandise
 
----
+**Note**: Specific utilities and pricing (e.g., "1 perk = 100 $EVENT tokens") will be determined in collaboration with event organizers. This creates a flexible framework where each event can define its own token economy.
 
-## ⚙️ Secondary Market Flow ✅ IMPLEMENTED
-
-### On Each Swap:
-
-- **Buy $EVENT**: 1% LP fee (encourages participation)
-- **Sell $EVENT**: 10% LP fee (discourages early dumps)
-
-### Dynamic Fee Hook:
-
-- **Uniswap V4 Integration**: Custom hook automatically applies different fees
-- **Buy Protection**: Lower fees encourage fan participation
-- **Sell Deterrent**: Higher fees prevent speculation and dumps
-- **Automatic Pool Creation**: Pool is created when funding goal is reached
-
-### Benefits:
-
-- Organizer gets nothing from swaps (already collected full goal upfront)
-- Fans benefit from lower buy fees and higher sell fees
-- Pool strengthens with each trade
-- Dynamic fees protect token value and encourage holding
+**Fans don't just speculate—they gain real event benefits and influence.**
 
 ---
+
 
 ## 📊 Complete Example: $100k Target Campaign
 
 ### 📋 Campaign Phase
 
 **Setup:**
+
 - **Target**: $100k USDC
 - **Organizer Deposit**: $10k USDC (10% upfront)
 - **Fans Contribute**: $120k USDC (20% over target)
 
 **Finalization:**
+
 - **Protocol Fee**: $10k USDC (from organizer's deposit)
 - **Net to Organizer**: $100k USDC (full target amount)
 - **EventTokens Minted**: 120k tokens (1:1 with USDC raised)
@@ -152,45 +142,34 @@ Fanio turns every event into a liquid digital asset.
 ### 🎯 Post-Campaign Pool
 
 **Pool Creation:**
-- **USDC Side**: $100k USDC (from organizer)
+
+- **USDC Side**: $120k USDC ($100k from organizer + $20k excess)
 - **EventToken Side**: 25k EventTokens (25% of target)
-- **Initial Price**: $4 per EventToken
+- **Initial Price**: $4.8 per EventToken
 
 **Final Distribution:**
+
 - **Contributors Hold**: 120k EventTokens
 - **Pool Holds**: 25k EventTokens
 - **Total Supply**: 145k EventTokens (fixed forever)
 
-### Fan Buys 100 USDC in Pool:
-
-- 1% fee → **1 USDC**
-- 0.4 USDC (40% of 1 USDC) → locked as permanent liquidity
-- 0.6 USDC (60% of 1 USDC) → Fanio
-
-### Fan Sells 100 USDC Worth of $EVENT:
-
-- 10% fee → **10 USDC**
-- 4 USDC (40% of 10 USDC) → permanent liquidity
-- 6 USDC (60% of 10 USDC) → Fanio
+**Trading Dynamics:**
+- **Dynamic Fees**: 1% buy fee, 10% sell fee (protects token value)
+- **Buy Pressure**: Fans buy EventTokens with USDC
+- **Sell Pressure**: Contributors sell EventTokens for USDC
+- **Pool Strengthening**: Each trade adds permanent liquidity
 
 ---
 
 ## 🎯 Current Status
 
-### ✅ Implemented Features
+### ✅ Fully Implemented
 
 - **Smart Contracts**: Complete crowdfunding system with Uniswap V4 integration
+- **Frontend Application**: Next.js web interface with real-time trading
 - **Dynamic Fees**: 1% buy, 10% sell with custom hook implementation
-- **Pool Creation**: Automatic liquidity when funding goals are reached
-- **Token Minting**: Controlled EventToken creation with ERC20Capped
 - **Test Suite**: 21 comprehensive tests (100% passing)
-- **Documentation**: Complete technical documentation
-- **Frontend Application**: Complete Next.js web interface
-- **Real-time Trading**: Live Uniswap V4 swap execution
-- **Wallet Integration**: MetaMask connection with network detection
-- **Transaction Management**: User-friendly transaction feedback
-- **Balance Updates**: Real-time token balance management
-- **Deployment Scripts**: Production deployment automation
+- **Deployment**: Production-ready on Base Sepolia testnet
 
 ---
 
