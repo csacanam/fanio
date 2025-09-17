@@ -32,31 +32,17 @@ Trustless funding for live concerts powered by Uniswap v4 hooks.
 
 ---
 
-## 🧩 First Principles
-
-1. **Fans should fund what they want to see** - not just buy tickets after the fact
-2. **Promoters need upfront capital** - not locked revenue from ticketing platforms
-3. **Blockchain removes intermediaries** - direct fan-to-promoter funding with automatic distribution
-4. **Early supporters get real benefits** - tokens with utility, not just speculation
-
----
-
 ## 💡 Solution: Fanio
 
 Fanio turns every event into a liquid digital asset through crowdfunding campaigns.
 
 ### How It Works
 
-1. **Campaign Creation**: Organizer creates a campaign with target amount and funding token (USDC)
-2. **Fan Funding**: Fans contribute USDC to reach the target, receiving EventTokens 1:1
-3. **Campaign Success**: If target is reached, organizer gets full funding upfront
-4. **Automatic Liquidity**: Pool is created on Uniswap V4 with 20% excess funds + 20% EventTokens
+1. **Campaign Creation**: Promoter creates a campaign with target amount in base currency (e.g., USDC)
+2. **Fan Funding**: Fans contribute base currency to reach the target, receiving EventTokens 1:1
+3. **Campaign Success**: If target is reached, promoter gets full funding upfront
+4. **Automatic Liquidity**: Pool is created on Uniswap V4 with equal amounts of base currency and EventTokens (1:1 initial price)
 5. **Secondary Market**: Fans can trade EventTokens with dynamic fees (1% buy, 10% sell)
-
-### Inspirations
-
-- **Kickstarter**: All-or-nothing crowdfunding model
-- **Zora**: Automatic liquidity preservation (but for concerts)
 
 ---
 
@@ -64,31 +50,23 @@ Fanio turns every event into a liquid digital asset through crowdfunding campaig
 
 ### 📋 Campaign Phase ($100k Target)
 
-**Setup:**
+**Setup (using USDC as base currency):**
 
 - **Target**: $100k USDC
-- **Organizer Deposit**: $10k USDC (10% upfront)
-- **Fans Contribute**: $120k USDC (20% over target)
+- **Promoter Deposit**: $10k USDC (10% upfront)
+- **Fans Contribute**: $120k USDC (100k target + 20k excess)
 
 **Process:**
 
-- **EventToken Minting**: 1:1 ratio with USDC contributed
-  - $120k USDC raised → 120k EventTokens minted to contributors
-- **Campaign Success**: When target is reached, campaign finalizes
+- **EventToken Minting**: 1:1 ratio with base currency contributed
+  - $120k base currency raised → 120k EventTokens minted to contributors
+- **Campaign Success**: When 120% of target is reached, campaign finalizes
 
 **Finalization:**
 
-- **Protocol Fee**: $10k USDC (from organizer's deposit)
-- **Net to Organizer**: $100k USDC (full target amount)
-- **Pool Creation**: 20k EventTokens + $20k excess USDC for Uniswap V4
-
-### 🎯 Post-Campaign Pool
-
-**Pool Composition:**
-
-- **USDC Side**: $20k USDC (excess funding)
-- **EventToken Side**: 20k EventTokens (minted for pool)
-- **Initial Price**: $1.0 per EventToken ($20k ÷ 20k tokens)
+- **Protocol Fee**: $10k USDC (from promoter's deposit)
+- **Net to Promoter**: $100k USDC (full target amount)
+- **Pool Creation**: Equal amounts of $20k USDC + 20k EventTokens (theoretical 1:1 price, actual higher due to dynamic fees)
 
 **Final Distribution:**
 
@@ -104,79 +82,30 @@ Fanio turns every event into a liquid digital asset through crowdfunding campaig
 
 ---
 
-## 🎁 EventToken Utilities (Future Exploration)
-
-**$EVENT tokens provide real utility beyond speculation:**
-
-- **Early Access**: Priority ticket purchasing
-- **Exclusive Perks**: Backstage passes, meet & greets, merchandise
-- **Voting Rights**: Influence show details (setlist, venue selection)
-- **Discounts**: Reduced prices on official tickets and merchandise
-
-**Note**: Specific utilities and pricing (e.g., "1 perk = 100 $EVENT tokens") will be determined in collaboration with event organizers. This creates a flexible framework where each event can define its own token economy.
-
-**Fans don't just speculate—they gain real event benefits and influence.**
-
----
-
 ## 🎯 Current Status
 
 ### ✅ Fully Implemented
 
-- **Smart Contracts**: Complete crowdfunding system with Uniswap V4 integration
-- **Frontend Application**: Next.js web interface with real-time trading
-- **Dynamic Fees**: 1% buy, 10% sell with custom hook implementation
+**Smart Contracts:**
+
+- **FundingManager**: Core crowdfunding logic with campaign management
+- **EventToken**: ERC20Capped tokens for each event (20% over-target cap)
+- **DynamicFeeHook**: Uniswap V4 hook implementing 1% buy, 10% sell fees
+- **StateView**: Contract for fetching pool slot0 data
+- **Libraries**: TokenLib, CampaignLib, and PoolLib for modular functionality
+
+**Frontend Application:**
+
+- **Next.js 15**: Modern React framework with TypeScript
+- **Real-time Trading**: Live quotes and swap execution via Uniswap V4
+- **Wallet Integration**: MetaMask connection with Base Sepolia support
+- **Transaction Management**: Success/error handling with BaseScan integration
+
+**Deployment & Testing:**
+
+- **Deployment Scripts**: Automated deployment to Base Sepolia testnet
 - **Test Suite**: 21 comprehensive tests (100% passing)
-- **Deployment**: Production-ready on Base Sepolia testnet
-
----
-
-## 🤝 Partner Integrations
-
-**No partner integrations.**
-
----
-
-## 🏗️ Project Structure
-
-```
-fanio/
-├── packages/
-│   ├── contracts/          # Smart contracts and blockchain logic
-│   │   ├── src/           # Source contracts
-│   │   │   ├── FundingManager.sol    # Core crowdfunding contract
-│   │   │   ├── EventToken.sol        # ERC20Capped event tokens
-│   │   │   ├── DynamicFeeHook.sol    # Uniswap V4 fee hook
-│   │   │   └── libraries/            # Contract libraries
-│   │   ├── test/          # Comprehensive test suite (21 tests)
-│   │   │   ├── FundingManager.t.sol
-│   │   │   ├── EventToken.t.sol
-│   │   │   ├── DynamicFeeHook.t.sol
-│   │   │   └── FundingManagerPoolIntegration.t.sol
-│   │   ├── script/        # Deployment scripts
-│   │   └── lib/           # Dependencies (Uniswap V4, OpenZeppelin)
-│   └── frontend/           # Next.js web application ✅ IMPLEMENTED
-│       ├── app/           # Next.js app router
-│       │   └── event/[slug]/ # Dynamic event pages
-│       ├── components/    # React components
-│       │   ├── ui/        # Reusable UI components
-│       │   │   ├── trading-modal.tsx        # Main trading interface
-│       │   │   └── transaction-result-modal.tsx # Transaction feedback
-│       │   └── theme-provider.tsx # Theme management
-│       ├── hooks/         # Custom React hooks
-│       │   ├── useCampaign.ts        # Campaign data management
-│       │   ├── useQuoter.ts          # Uniswap V4 quotes
-│       │   ├── useUniswapV4Swap.ts  # Swap execution
-│       │   ├── useWallet.ts          # Wallet connection
-│       │   └── useTokenBalances.ts   # Token balance management
-│       ├── lib/          # Utility libraries
-│       │   ├── sdk-core/             # Uniswap SDK Core (adapted)
-│       │   ├── v4-sdk/               # Uniswap V4 SDK (adapted)
-│       │   └── universal-router-sdk/ # Universal Router SDK (adapted)
-│       ├── config/       # Configuration
-│       │   └── contracts.ts          # Contract addresses
-│       └── public/       # Static assets
-```
+- **Contract Addresses**: All contracts deployed on Base Sepolia
 
 ---
 
@@ -185,7 +114,7 @@ fanio/
 ### Prerequisites
 
 - Node.js (v18 or later)
-- pnpm package manager
+- npm package manager
 - Git
 - Foundry (for smart contract development)
 
@@ -201,7 +130,7 @@ fanio/
 2. **Install dependencies**
 
    ```bash
-   pnpm install
+   npm install
    ```
 
 3. **Set up smart contracts**
@@ -217,7 +146,7 @@ fanio/
 
    ```bash
    cd packages/frontend
-   pnpm dev
+   npm run dev
    ```
 
 5. **Open your browser**
@@ -253,7 +182,7 @@ fanio/
 - **DynamicFeeHook** - Custom hook for asymmetric fees (1% buy, 10% sell)
 - **FundingManager** - Core crowdfunding contract
 - **EventToken** - ERC20Capped tokens for each event
-- **USDC** - Stable currency for funding
+- **Base Currency** - Stable currencies for funding (USDC, DAI, etc.)
 - **Foundry** - Development and testing framework
 
 ---
