@@ -61,30 +61,43 @@ Fanio turns every event into a liquid digital asset.
 
 ---
 
-## 📦 Tokenomics of $EVENT
+## 🚀 Campaign Process & Tokenomics
 
-### 💰 Funding Process (USDC → EventTokens)
+### 📋 Campaign Phase (Funding)
 
-**1. Campaign Funding (USDC)**
+**1. Campaign Setup**
 - **Target**: Organizer sets a target amount (e.g., $100k USDC)
+- **Organizer Deposit**: 10% of target required upfront (e.g., $10k USDC)
 - **Funding Cap**: Maximum 20% over target allowed (e.g., $120k USDC max)
-- **Protocol Fee**: 10% of target in USDC (only charged if target is reached)
-- **Net to Organizer**: Target amount minus protocol fee
 
-**2. EventToken Supply Calculation**
-- **Pre-funding Tokens**: 1:1 ratio with total USDC raised
+**2. During Campaign**
+- **Contributions**: Fans contribute USDC to reach target
+- **EventToken Minting**: 1:1 ratio with USDC contributed
   - If $120k USDC raised → 120k EventTokens minted to contributors
-- **Pool Tokens**: 25% of original target (for Uniswap V4 liquidity)
-  - If $100k target → 25k EventTokens for pool
-- **Total Supply**: Pre-funding + Pool tokens
-  - Example: 120k (pre-funding) + 25k (pool) = 145k total EventTokens
+- **Campaign Success**: When target is reached, campaign finalizes
 
-### 🎯 Key Principles
+**3. Campaign Finalization**
+- **Protocol Fee**: 10% of target in USDC (e.g., $10k from organizer's deposit)
+- **Net to Organizer**: Full target amount (e.g., $100k USDC)
+- **Pool Creation**: 25% of target in EventTokens reserved for Uniswap V4
+  - If $100k target → 25k EventTokens for pool liquidity
 
-- **1:1 Minting**: Every USDC contributed = 1 EventToken minted
-- **Fair Distribution**: Pool tokens are calculated from original target, not total raised
-- **Supply Cap**: Total EventTokens = raised USDC + 25% of target
-- **No Inflation**: EventTokens are only minted during the campaign phase
+### 🎯 Post-Campaign Tokenomics
+
+**EventToken Distribution:**
+- **Pre-funding Tokens**: 120k EventTokens (held by contributors)
+- **Pool Tokens**: 25k EventTokens (for Uniswap V4 liquidity)
+- **Total Supply**: 145k EventTokens (fixed, no more minting)
+
+**Pool Composition:**
+- **USDC Side**: $100k USDC (from organizer's net proceeds)
+- **EventToken Side**: 25k EventTokens (minted for pool)
+- **Initial Price**: $4 per EventToken ($100k ÷ 25k tokens)
+
+**Trading Dynamics:**
+- **Buy Pressure**: Fans buy EventTokens with USDC
+- **Sell Pressure**: Contributors sell EventTokens for USDC
+- **Dynamic Fees**: 1% buy fee, 10% sell fee (protects token value)
 
 ---
 
@@ -122,24 +135,31 @@ Fanio turns every event into a liquid digital asset.
 
 ---
 
-## 📊 Numerical Example
+## 📊 Complete Example: $100k Target Campaign
 
-**Target**: $100k USDC
+### 📋 Campaign Phase
 
-### Campaign Phase (USDC Funding):
-
+**Setup:**
 - **Target**: $100k USDC
-- **Actual Raised**: $120k USDC (20% over target)
-- **Protocol Fee**: $10k USDC (10% of target)
-- **Net to Organizer**: $100k USDC (target minus protocol fee)
+- **Organizer Deposit**: $10k USDC (10% upfront)
+- **Fans Contribute**: $120k USDC (20% over target)
 
-### EventToken Distribution:
+**Finalization:**
+- **Protocol Fee**: $10k USDC (from organizer's deposit)
+- **Net to Organizer**: $100k USDC (full target amount)
+- **EventTokens Minted**: 120k tokens (1:1 with USDC raised)
 
-- **Pre-funding Tokens**: 120k EventTokens (1:1 with $120k USDC raised)
-  - Distributed to contributors based on their USDC contributions
-- **Pool Tokens**: 25k EventTokens (25% of $100k target)
-  - Reserved for Uniswap V4 initial liquidity
-- **Total EventToken Supply**: 145k tokens (120k + 25k)
+### 🎯 Post-Campaign Pool
+
+**Pool Creation:**
+- **USDC Side**: $100k USDC (from organizer)
+- **EventToken Side**: 25k EventTokens (25% of target)
+- **Initial Price**: $4 per EventToken
+
+**Final Distribution:**
+- **Contributors Hold**: 120k EventTokens
+- **Pool Holds**: 25k EventTokens
+- **Total Supply**: 145k EventTokens (fixed forever)
 
 ### Fan Buys 100 USDC in Pool:
 
