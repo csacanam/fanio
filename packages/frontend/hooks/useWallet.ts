@@ -28,6 +28,7 @@ export interface WalletState {
   isCorrectNetwork: boolean;
   isConnecting: boolean;
   error: string | null;
+  signer: ethers.Signer | null;
 }
 
 export const useWallet = () => {
@@ -37,7 +38,8 @@ export const useWallet = () => {
     network: null,
     isCorrectNetwork: false,
     isConnecting: false,
-    error: null
+    error: null,
+    signer: null
   });
 
   // Check if MetaMask is installed
@@ -124,12 +126,16 @@ export const useWallet = () => {
       setWalletState(prev => ({ ...prev, isConnecting: true, error: null }));
 
       // Request account access
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const accounts = await window.ethereum!.request({ method: 'eth_requestAccounts' });
       const address = accounts[0];
 
       // Get current network
       const currentChainId = await getCurrentNetwork();
       const isCorrectNetwork = checkNetworkSupport(currentChainId || '');
+
+      // Create provider and signer
+      const provider = new ethers.BrowserProvider(window.ethereum!);
+      const signer = await provider.getSigner();
 
       setWalletState({
         isConnected: true,
@@ -137,7 +143,8 @@ export const useWallet = () => {
         network: currentChainId,
         isCorrectNetwork,
         isConnecting: false,
-        error: null
+        error: null,
+        signer
       });
 
       // If not on correct network, switch automatically
@@ -169,7 +176,8 @@ export const useWallet = () => {
       network: null,
       isCorrectNetwork: false,
       isConnecting: false,
-      error: null
+      error: null,
+      signer: null
     });
   };
 
@@ -195,12 +203,12 @@ export const useWallet = () => {
       window.location.reload();
     };
 
-    window.ethereum.on('accountsChanged', handleAccountsChanged);
-    window.ethereum.on('chainChanged', handleChainChanged);
+    window.ethereum!.on('accountsChanged', handleAccountsChanged);
+    window.ethereum!.on('chainChanged', handleChainChanged);
 
     return () => {
-      window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
-      window.ethereum.removeListener('chainChanged', handleChainChanged);
+      window.ethereum!.removeListener('accountsChanged', handleAccountsChanged);
+      window.ethereum!.removeListener('chainChanged', handleChainChanged);
     };
   }, []);
 
@@ -217,11 +225,15 @@ export const useWallet = () => {
       if (!isMetaMaskInstalled()) return;
 
       try {
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        const accounts = await window.ethereum!.request({ method: 'eth_accounts' });
         if (accounts.length > 0) {
           const address = accounts[0];
           const currentChainId = await getCurrentNetwork();
           const isCorrectNetwork = checkNetworkSupport(currentChainId || '');
+
+          // Create provider and signer
+          const provider = new ethers.BrowserProvider(window.ethereum!);
+          const signer = await provider.getSigner();
 
           setWalletState({
             isConnected: true,
@@ -229,7 +241,8 @@ export const useWallet = () => {
             network: currentChainId,
             isCorrectNetwork,
             isConnecting: false,
-            error: null
+            error: null,
+            signer
           });
         }
       } catch (error) {
@@ -249,6 +262,7 @@ export const useWallet = () => {
       isCorrectNetwork: false,
       isConnecting: false,
       error: null,
+      signer: null,
       connectWallet: () => {},
       disconnectWallet: () => {},
       switchToBaseSepolia: async () => false,

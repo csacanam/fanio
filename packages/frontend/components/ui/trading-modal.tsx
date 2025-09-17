@@ -7,6 +7,9 @@ import { Input } from './input'
 import { Label } from './label'
 import { ArrowUpDown, TrendingUp, TrendingDown } from 'lucide-react'
 import { useQuoter } from '@/hooks/useQuoter'
+import { useUniswapV4Swap } from '@/hooks/useUniswapV4Swap'
+import { useWallet } from '@/hooks/useWallet'
+import { TransactionResultModal } from './transaction-result-modal'
 
 interface TradingModalProps {
   isOpen: boolean
@@ -21,6 +24,7 @@ interface TradingModalProps {
   initialMode?: 'buy' | 'sell'
   poolKey?: any // PoolKey for quoter
   eventTokenAddress?: string // EventToken address for quoter
+  onBalanceUpdate?: () => void // Callback to refresh balances
 }
 
 export function TradingModal({
@@ -35,12 +39,30 @@ export function TradingModal({
   isLoading = false,
   initialMode = 'buy',
   poolKey,
-  eventTokenAddress
+  eventTokenAddress,
+  onBalanceUpdate
 }: TradingModalProps) {
   const [mode, setMode] = useState<'buy' | 'sell'>(initialMode)
   const [amount, setAmount] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [validationError, setValidationError] = useState<string>('')
+  const [showResultModal, setShowResultModal] = useState(false)
+  const [transactionResult, setTransactionResult] = useState<{
+    isSuccess: boolean
+    txHash?: string
+    error?: string
+  } | null>(null)
+
+  // Update balances when modal opens
+  useEffect(() => {
+    if (isOpen && onBalanceUpdate) {
+      onBalanceUpdate()
+    }
+  }, [isOpen]) // Remove onBalanceUpdate from dependencies to prevent infinite loop
+
+  // Hooks
+  const wallet = useWallet()
+  const { swapState, executeSwap, checkPermit2Approval, approvePermit2, resetSwapState } = useUniswapV4Swap()
 
   // Determine zeroForOne based on mode and token order
   const isEventTokenCurrency0 = poolKey?.currency0?.toLowerCase() === eventTokenAddress?.toLowerCase()
@@ -101,21 +123,67 @@ export function TradingModal({
       return
     }
 
-    setIsProcessing(true)
-    try {
-      if (mode === 'buy') {
-        // For buy: amount is USDC to spend
-        await onBuy(parseFloat(amount))
-      } else {
-        // For sell: amount is TSBOG to sell
-        await onSell(parseFloat(amount))
+    // Always execute real swap if wallet and pool are available
+    if (wallet.signer && poolKey) {
+      try {
+        const numAmount = parseFloat(amount)
+        const amountIn = BigInt(Math.floor(numAmount * (mode === 'buy' ? 1e6 : 1e18))) // USDC: 6 decimals, EventToken: 18 decimals
+        
+        // Calculate amountOutMinimum with 0.5% slippage
+        const amountOutMinimum = quote?.amountOut ? 
+          BigInt(Math.floor(Number(quote.amountOut) * 0.995)) : 
+          BigInt(0)
+
+        const swapParams = {
+          poolKey,
+          amountIn,
+          amountOutMinimum,
+          zeroForOne,
+          recipient: wallet.address || '',
+          deadline: Math.floor(Date.now() / 1000) + 1800 // 30 minutes
+        }
+
+        const result = await executeSwap(wallet.signer, swapParams)
+        
+        // Show result modal
+        setTransactionResult({
+          isSuccess: result.success,
+          txHash: result.txHash,
+          error: result.error
+        })
+        setShowResultModal(true)
+        
+        if (result.success) {
+          setAmount('')
+          // Close the main trading modal after a short delay to show the result
+          setTimeout(() => {
+            onClose()
+          }, 2000)
+        }
+      } catch (error) {
+        console.error('Swap error:', error)
+        setTransactionResult({
+          isSuccess: false,
+          error: error instanceof Error ? error.message : 'Unknown error occurred'
+        })
+        setShowResultModal(true)
       }
-      setAmount('')
-      onClose()
-    } catch (error) {
-      console.error('Trading error:', error)
-    } finally {
-      setIsProcessing(false)
+    } else {
+      // Fallback to simulated behavior if no wallet or pool
+      setIsProcessing(true)
+      try {
+        if (mode === 'buy') {
+          await onBuy(parseFloat(amount))
+        } else {
+          await onSell(parseFloat(amount))
+        }
+        setAmount('')
+        onClose()
+      } catch (error) {
+        console.error('Trading error:', error)
+      } finally {
+        setIsProcessing(false)
+      }
     }
   }
 
@@ -262,16 +330,31 @@ export function TradingModal({
               </div>
             )}
 
+
+            {/* Error Display */}
+            {swapState.error && (
+              <div className="text-sm text-red-600 bg-red-50 p-2 rounded-md border border-red-200">
+                ❌ {swapState.error}
+              </div>
+            )}
+
+            {/* Success Display */}
+
             {/* Submit Button */}
             <Button
               type="submit"
               className="w-full"
-              disabled={!amount || parseFloat(amount) <= 0 || isProcessing || isLoading || !!validationError}
+              disabled={!amount || parseFloat(amount) <= 0 || isProcessing || isLoading || !!validationError || swapState.isExecuting || swapState.isApproving}
             >
-              {isProcessing ? (
+        {isProcessing || swapState.isExecuting ? (
+          <>
+            <ArrowUpDown className="h-4 w-4 mr-2 animate-spin" />
+            Executing Swap...
+          </>
+        ) : swapState.isApproving ? (
                 <>
                   <ArrowUpDown className="h-4 w-4 mr-2 animate-spin" />
-                  Processing...
+                  Approving...
                 </>
               ) : (
                 <>
@@ -283,6 +366,23 @@ export function TradingModal({
           </form>
         </div>
       </DialogContent>
+
+      {/* Transaction Result Modal */}
+      <TransactionResultModal
+        isOpen={showResultModal}
+        onClose={() => {
+          setShowResultModal(false)
+          setTransactionResult(null)
+          resetSwapState()
+          // If swap was successful, also close the main modal
+          if (transactionResult?.isSuccess) {
+            onClose()
+          }
+        }}
+        isSuccess={transactionResult?.isSuccess || false}
+        txHash={transactionResult?.txHash}
+        error={transactionResult?.error}
+      />
     </Dialog>
   )
 }

@@ -1223,6 +1223,7 @@ export default function EventPage({ params }: EventPageProps) {
           initialMode={tradingMode}
           poolKey={campaignData?.poolKey}
           eventTokenAddress={campaignData?.eventToken}
+          onBalanceUpdate={refreshBalances}
         />
       </ClientOnly>
     </div>

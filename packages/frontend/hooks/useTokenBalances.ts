@@ -36,17 +36,34 @@ export const useTokenBalances = (
     error: null
   });
 
-  const fetchBalances = async () => {
+  const fetchBalances = async (retryCount = 0) => {
     if (!userAddress || !eventTokenAddress) {
       setBalances(prev => ({ ...prev, loading: false }));
       return;
     }
 
+    // Prevent too many calls - add a small delay
+    if (retryCount === 0) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
     try {
       setBalances(prev => ({ ...prev, loading: true, error: null }));
 
-      // Create provider for Base Sepolia
+      // Create provider for Base Sepolia with retry
       const provider = new ethers.JsonRpcProvider(getRpcUrl(DEFAULT_NETWORK));
+      
+      // Test network connection
+      try {
+        await provider.getNetwork();
+      } catch (networkError) {
+        console.warn('Network detection failed, retrying...', networkError);
+        if (retryCount < 3) {
+          setTimeout(() => fetchBalances(retryCount + 1), 1000 * (retryCount + 1));
+          return;
+        }
+        throw new Error('Failed to connect to network after 3 retries');
+      }
       
       // Get contract addresses
       const addresses = CONTRACTS[DEFAULT_NETWORK];
@@ -65,13 +82,13 @@ export const useTokenBalances = (
         provider
       );
 
-      // Fetch balances and decimals in parallel
+      // Fetch balances and decimals in parallel with error handling
       const [usdcBalance, usdcDecimals, eventTokenBalance, eventTokenDecimals, eventTokenSymbol] = await Promise.all([
-        usdc.balanceOf(userAddress),
-        usdc.decimals(),
-        eventToken.balanceOf(userAddress),
-        eventToken.decimals(),
-        eventToken.symbol()
+        usdc.balanceOf(userAddress).catch(() => BigInt(0)), // Default to 0 if balance fails
+        usdc.decimals().catch(() => 6), // Default to 6 for USDC
+        eventToken.balanceOf(userAddress).catch(() => BigInt(0)), // Default to 0 if balance fails
+        eventToken.decimals().catch(() => 18), // Default to 18 if decimals() fails
+        eventToken.symbol().catch(() => 'EVENT') // Default to 'EVENT' if symbol() fails
       ]);
 
       // Format balances with proper decimals
@@ -90,6 +107,10 @@ export const useTokenBalances = (
 
     } catch (error) {
       console.error('Error fetching token balances:', error);
+      console.error('User address:', userAddress);
+      console.error('Event token address:', eventTokenAddress);
+      console.error('RPC URL:', getRpcUrl(DEFAULT_NETWORK));
+      
       setBalances(prev => ({
         ...prev,
         loading: false,
@@ -105,9 +126,15 @@ export const useTokenBalances = (
     }
   }, [isHydrated, userAddress, eventTokenAddress]);
 
-  // Refresh balances function
+  // Refresh balances function with throttle
+  let refreshTimeout: NodeJS.Timeout | null = null;
   const refreshBalances = () => {
-    fetchBalances();
+    if (refreshTimeout) {
+      clearTimeout(refreshTimeout);
+    }
+    refreshTimeout = setTimeout(() => {
+      fetchBalances();
+    }, 200); // Throttle to 200ms
   };
 
   return {

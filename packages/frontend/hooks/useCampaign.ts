@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
+import { ethers, formatUnits, JsonRpcProvider, ZeroAddress, keccak256, AbiCoder } from 'ethers';
 import { CONTRACTS, DEFAULT_NETWORK, getRpcUrl } from '@/config/contracts';
 import { useHydration } from './useHydration';
 
@@ -96,7 +96,7 @@ export const useCampaign = (campaignId: number = 0) => {
       setError(null);
 
       // Create provider for Base Sepolia (no wallet needed for reading)
-      const provider = new ethers.JsonRpcProvider(getRpcUrl(DEFAULT_NETWORK));
+      const provider = new JsonRpcProvider(getRpcUrl(DEFAULT_NETWORK));
       
       // Get contract addresses
       const addresses = CONTRACTS[DEFAULT_NETWORK];
@@ -127,7 +127,7 @@ export const useCampaign = (campaignId: number = 0) => {
       let tokenName = "Event Token";
       let tokenSymbol = "EVT";
       
-      if (eventToken !== ethers.ZeroAddress) {
+      if (eventToken !== ZeroAddress) {
         try {
           const eventTokenContract = new ethers.Contract(
             eventToken,
@@ -152,10 +152,16 @@ export const useCampaign = (campaignId: number = 0) => {
       if (status.isFunded) {
         try {
           const poolData = await fundingManager.getCampaignPool(campaignId);
+          console.log('🏊 Pool data from contract:', poolData);
+          
+          // Handle dynamic fee flag (0x800000 = 8388608)
+          const DYNAMIC_FEE_FLAG = 0x800000; // 8388608 in decimal
+          const isDynamicFee = Number(poolData.fee) === DYNAMIC_FEE_FLAG;
+          
           poolKey = {
             currency0: poolData.currency0,
             currency1: poolData.currency1,
-            fee: Number(poolData.fee),
+            fee: isDynamicFee ? DYNAMIC_FEE_FLAG : Number(poolData.fee),
             tickSpacing: Number(poolData.tickSpacing),
             hooks: poolData.hooks
           };
@@ -170,7 +176,7 @@ export const useCampaign = (campaignId: number = 0) => {
           console.log('  Hooks:', poolKey.hooks);
           
           // Calculate and log PoolId
-          const poolId = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(
+          const poolId = keccak256(AbiCoder.defaultAbiCoder().encode(
             ['address', 'address', 'uint24', 'int24', 'address'],
             [poolKey.currency0, poolKey.currency1, poolKey.fee, poolKey.tickSpacing, poolKey.hooks]
           ));
@@ -253,11 +259,11 @@ export const useCampaign = (campaignId: number = 0) => {
       const usdcDecimals = await usdc.decimals();
 
       // Format amounts
-      const raisedAmount = ethers.formatUnits(status.raisedAmount, usdcDecimals);
-      const targetAmount = ethers.formatUnits(status.targetAmount, usdcDecimals);
-      const campaignGoalFormatted = ethers.formatUnits(campaignGoal, usdcDecimals);
-      const organizerDeposit = ethers.formatUnits(status.organizerDeposit, usdcDecimals);
-      const protocolFeesCollected = ethers.formatUnits(status.protocolFeesCollected, usdcDecimals);
+      const raisedAmount = formatUnits(status.raisedAmount, usdcDecimals);
+      const targetAmount = formatUnits(status.targetAmount, usdcDecimals);
+      const campaignGoalFormatted = formatUnits(campaignGoal, usdcDecimals);
+      const organizerDeposit = formatUnits(status.organizerDeposit, usdcDecimals);
+      const protocolFeesCollected = formatUnits(status.protocolFeesCollected, usdcDecimals);
 
 
       // Calculate progress based on real campaign goal (not organizer target)
