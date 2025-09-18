@@ -34,7 +34,7 @@ contract Config is Script {
             return address(0);
         } else if (block.chainid == 84532) {
             // Base Sepolia - return the deployed address
-            return address(0x4b840c5893F32420966421678CBeAA01894dDE03);
+            return address(0xe8ff979679459D966D26185446fa301228ac401B);
         } else if (block.chainid == 8453) {
             // Base Mainnet - return address(0) to indicate it needs to be deployed
             return address(0);
@@ -50,7 +50,7 @@ contract Config is Script {
             return address(0);
         } else if (block.chainid == 84532) {
             // Base Sepolia - return the StateView address
-            return address(0x571291b572ed32ce6751a2Cb2486EbEe8DEfB9B4);
+            return address(0xe8ff979679459D966D26185446fa301228ac401B);
         } else if (block.chainid == 8453) {
             // Base Mainnet - return address(0) to indicate it needs to be deployed
             return address(0);
@@ -66,7 +66,7 @@ contract Config is Script {
             return address(0);
         } else if (block.chainid == 84532) {
             // Base Sepolia - return the Quoter address
-            return address(0x4A6513c898fe1B2d0E78d3b0e0A4a151589B1cBa);
+            return address(0xe8ff979679459D966D26185446fa301228ac401B);
         } else if (block.chainid == 8453) {
             // Base Mainnet - return address(0) to indicate it needs to be deployed
             return address(0);
